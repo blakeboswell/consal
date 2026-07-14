@@ -12,6 +12,7 @@ success/failure be an accidental side effect).
 
 from __future__ import annotations
 
+import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -30,14 +31,35 @@ class TurnResult:
 def ensure_container_up(subconfig_name: str) -> None:
     """Run `dco --sub-config <subconfig_name>` to bring the container up.
 
-    Not yet implemented.
+    Raises `subprocess.CalledProcessError` if `dco` fails — bringing the
+    container up is a precondition for everything that follows, so failure
+    here must stop the caller rather than be silently absorbed.
     """
-    raise NotImplementedError
+    subprocess.run(["dco", "--sub-config", subconfig_name], check=True)
 
 
 def run_turn(workspace_folder: Path, prompt: str) -> TurnResult:
     """Run one headless turn: `devcontainer exec ... -- claude -p <prompt>`.
 
-    Not yet implemented.
+    Deliberately does not raise on a nonzero exit — the whole point of
+    going through `devcontainer exec` is that its exit code becomes the
+    turn's explicit success/failure signal for the caller (the scheduler)
+    to act on, not an exception to catch.
     """
-    raise NotImplementedError
+    result = subprocess.run(
+        [
+            "devcontainer",
+            "exec",
+            "--workspace-folder",
+            str(workspace_folder),
+            "--",
+            "claude",
+            "-p",
+            prompt,
+        ],
+        capture_output=True,
+        text=True,
+    )
+    return TurnResult(
+        exit_code=result.returncode, stdout=result.stdout, stderr=result.stderr
+    )

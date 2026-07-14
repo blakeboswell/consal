@@ -17,6 +17,16 @@ Early scaffolding — not yet functional.
 ```sh
 uv sync                # install deps into .venv
 uv run pytest          # fast unit tests only
-uv run pytest -m integration   # real gh/dco/devcontainer integration tests
 uv run eigen doctor    # self-consistency / reachability checks (stub)
 ```
+
+The integration tier (`pytest -m integration`) hits real `gh`/`dco`/
+`devcontainer` and can't run inside this repo's own dev sandbox — no
+Docker there. Run it on the host instead:
+
+```sh
+./scripts/run-integration-tests.sh
+```
+
+Writes to `.integration-results/latest.txt` (gitignored) — readable from
+inside the sandbox too, since it bind-mounts this same repo directory.
