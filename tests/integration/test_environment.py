@@ -57,7 +57,10 @@ def test_dco_supports_up_only() -> None:
     `dco` build installed on this host.
     """
     result = subprocess.run(["dco", "--help"], capture_output=True, text=True)
-    assert "--up-only" in result.stdout, (
+    # dco's usage() writes to stderr (die()/info()/usage() all do, per
+    # dco.in), not stdout -- check both so this doesn't care which.
+    help_text = result.stdout + result.stderr
+    assert "--up-only" in help_text, (
         "dco --help doesn't mention --up-only yet — this host's dco build "
         "predates the flag Eigen's headless bring-up depends on"
     )
