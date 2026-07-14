@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import subprocess
 from collections.abc import Iterator
+from dataclasses import dataclass
 from pathlib import Path
 
 import pytest
@@ -14,8 +15,19 @@ from eigen.container import ensure_container_up
 SUBCONFIG_NAME = "eigen"
 
 
+@dataclass(frozen=True)
+class ManagedProject:
+    """Bundles what `run_turn`/`ensure_container_up` both need, so tests
+    using `eigen_managed_project` don't have to import or hardcode the
+    sub-config name separately from the project root.
+    """
+
+    root: Path
+    subconfig_name: str
+
+
 @pytest.fixture
-def eigen_managed_project(tmp_path: Path) -> Iterator[Path]:
+def eigen_managed_project(tmp_path: Path) -> Iterator[ManagedProject]:
     """A disposable git repo with a real Eigen-generated sub-config
     (.devcontainer/eigen/, .claude/settings.json with the guardrail hook
     registered) and a live container already up, via the real
@@ -60,7 +72,7 @@ def eigen_managed_project(tmp_path: Path) -> Iterator[Path]:
     ensure_container_up(tmp_path, SUBCONFIG_NAME)
 
     try:
-        yield tmp_path
+        yield ManagedProject(root=tmp_path, subconfig_name=SUBCONFIG_NAME)
     finally:
         subprocess.run(
             ["dco", str(tmp_path), "--sub-config", SUBCONFIG_NAME, "--purge"],

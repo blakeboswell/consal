@@ -35,13 +35,15 @@ def test_run_turn_builds_expected_command(mock_run: MagicMock) -> None:
     mock_run.return_value = subprocess.CompletedProcess(
         args=[], returncode=0, stdout="ok", stderr=""
     )
-    run_turn(Path("/workspace"), "implement issue #42")
+    run_turn(Path("/workspace"), "eigen", "implement issue #42")
     mock_run.assert_called_once_with(
         [
             "devcontainer",
             "exec",
             "--workspace-folder",
             "/workspace",
+            "--config",
+            "/workspace/.devcontainer/eigen/devcontainer.json",
             "--",
             "claude",
             "-p",
@@ -57,7 +59,7 @@ def test_run_turn_returns_result_on_success(mock_run: MagicMock) -> None:
     mock_run.return_value = subprocess.CompletedProcess(
         args=[], returncode=0, stdout="done", stderr=""
     )
-    result = run_turn(Path("/workspace"), "prompt")
+    result = run_turn(Path("/workspace"), "eigen", "prompt")
     assert result == TurnResult(exit_code=0, stdout="done", stderr="")
     assert result.succeeded is True
 
@@ -67,6 +69,6 @@ def test_run_turn_returns_result_on_failure_without_raising(mock_run: MagicMock)
     mock_run.return_value = subprocess.CompletedProcess(
         args=[], returncode=1, stdout="", stderr="claude crashed"
     )
-    result = run_turn(Path("/workspace"), "prompt")
+    result = run_turn(Path("/workspace"), "eigen", "prompt")
     assert result == TurnResult(exit_code=1, stdout="", stderr="claude crashed")
     assert result.succeeded is False

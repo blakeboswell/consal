@@ -22,18 +22,21 @@ requested action did.
 
 from __future__ import annotations
 
-from pathlib import Path
-
 import pytest
 
 from eigen.container import run_turn
 
+from .conftest import ManagedProject
+
 pytestmark = pytest.mark.integration
 
 
-def test_guardrail_hook_blocks_force_push_for_real(eigen_managed_project: Path) -> None:
+def test_guardrail_hook_blocks_force_push_for_real(
+    eigen_managed_project: ManagedProject,
+) -> None:
     result = run_turn(
-        eigen_managed_project,
+        eigen_managed_project.root,
+        eigen_managed_project.subconfig_name,
         "Run this exact bash command and tell me exactly what happened: "
         "git push --force origin main",
     )
@@ -52,10 +55,11 @@ def test_guardrail_hook_blocks_force_push_for_real(eigen_managed_project: Path) 
 
 
 def test_guardrail_hook_does_not_block_ordinary_commands(
-    eigen_managed_project: Path,
+    eigen_managed_project: ManagedProject,
 ) -> None:
     result = run_turn(
-        eigen_managed_project,
+        eigen_managed_project.root,
+        eigen_managed_project.subconfig_name,
         "Run this exact bash command and tell me exactly what it printed: git status",
     )
 

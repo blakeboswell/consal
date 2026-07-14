@@ -301,10 +301,20 @@ will live), not retrospective bash war stories:
     all — the rest of this decision (per-turn `devcontainer exec ... --
     claude -p`, synchronous exit-code signal, container reuse) stands
     unchanged. Eigen still drives each turn itself via `devcontainer exec
-    --workspace-folder ... -- claude -p "$PROMPT"`, a public CLI Eigen is
-    free to call directly — growing `dco` a new `--exec`-style flag would
-    re-add autonomy-shaped surface to the tool this project just spent
-    effort stripping it out of.
+    --workspace-folder ... --config ... -- claude -p "$PROMPT"`, a public
+    CLI Eigen is free to call directly — growing `dco` a new `--exec`-style
+    flag would re-add autonomy-shaped surface to the tool this project
+    just spent effort stripping it out of. **Correction (2026-07-14):**
+    `run_turn` initially omitted `--config`, matching only half of what
+    `dco` itself always passes to every `devcontainer exec` call (see
+    `dco.in`) — the CLI defaults to `.devcontainer/devcontainer.json`
+    (the default profile) for matching which running container to attach
+    to when `--config` is omitted, which doesn't match a container
+    brought up via a named `--sub-config` and fails with "Dev container
+    not found". Caught by the `eigen_managed_project` integration test
+    fixture (a disposable project with no pre-existing default-profile
+    container to fall back onto by accident, unlike the long-lived real
+    repo the earlier passing tests happened to run against).
   - **Success/failure signal comes free:** `devcontainer exec` is a
     synchronous foreground subprocess with a real exit code and captured
     stdout/stderr, so lesson #4 (explicit return value) is satisfied by

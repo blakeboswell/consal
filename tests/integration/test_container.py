@@ -13,6 +13,15 @@ to use it.
 Uses the `.devcontainer/eigen-test/` fixture sub-config, not the (not yet
 built) production "eigen" sub-config `config.generate_subconfig` will
 produce — see that fixture's own README.md.
+
+Note: an earlier version of `run_turn` omitted `--config` from its
+`devcontainer exec` call and these two tests passed anyway — almost
+certainly by accident, reaching an already-running default-profile
+container on the real, persistent repo this ran against rather than the
+`eigen-test` sub-config container `ensure_container_up` actually brought
+up. Caught once a disposable-project fixture with no such fallback
+container existed (see conftest.py's `eigen_managed_project`) — see the
+correction in `container.py`'s `run_turn` docstring.
 """
 
 from __future__ import annotations
@@ -31,7 +40,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 def test_ensure_container_up_and_run_turn_against_fixture() -> None:
     ensure_container_up(REPO_ROOT, "eigen-test")
 
-    result = run_turn(REPO_ROOT, "Respond with exactly one word: pong")
+    result = run_turn(REPO_ROOT, "eigen-test", "Respond with exactly one word: pong")
 
     assert result.succeeded, (
         f"run_turn failed (exit {result.exit_code})\n"
@@ -51,7 +60,7 @@ def test_run_turn_reports_failure_without_raising() -> None:
     """
     ensure_container_up(REPO_ROOT, "eigen-test")
 
-    result = run_turn(REPO_ROOT, "")
+    result = run_turn(REPO_ROOT, "eigen-test", "")
 
     assert result.succeeded is False
     assert result.exit_code != 0
