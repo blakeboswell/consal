@@ -156,7 +156,16 @@ built-in knowledge of any of this:
   explicit, narrow allowlist, not "open and hope."
 - A credential scoped to exactly the target repo, never the user's full
   personal access — so a hijacked agent's reach is bounded even if it tries
-  to misuse its own credential.
+  to misuse its own credential. **Note (2026-07-14):** SSH and the PAT
+  (`GH_TOKEN`/`EIGEN_GH_PAT`) are unrelated mechanisms — the PAT makes
+  `gh` commands and HTTPS git operations work, but does nothing for an
+  `ssh://`/`git@github.com:...` remote, which still needs a trusted host
+  key and a private key regardless of any PAT. Found by trying to push
+  this very repo from inside its own dev sandbox, which has neither.
+  Eigen-managed projects need **HTTPS remotes**, not SSH, for the
+  scoped-credential isolation goal to actually cover `git push`, not just
+  `gh` API calls — relevant once `github.py`/`scheduler.py` exist and
+  actually push branches from inside a container.
 - A human is the only one who can actually merge code into the project.
   The agent must never force-push, push directly to a protected branch, or
   touch branch/repo protection settings — enforced at two independent
