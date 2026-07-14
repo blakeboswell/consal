@@ -55,6 +55,48 @@ def ensure_container_up(workspace_folder: Path, subconfig_name: str) -> None:
     )
 
 
+def exec_in_container(
+    workspace_folder: Path,
+    subconfig_name: str,
+    argv: list[str],
+    input: str | None = None,
+) -> TurnResult:
+    """Run an arbitrary command inside a running container via
+    `devcontainer exec --workspace-folder ... --config ...`.
+
+    `run_turn` is the specific case of this for `claude -p <prompt>`; this
+    lower-level entry point exists so other code (and tests — e.g.
+    invoking the guardrail hook script directly with a synthetic
+    tool-call payload on stdin, to test hook enforcement independent of
+    whether a model actually attempts a given tool call) doesn't have to
+    reconstruct the `--workspace-folder`/`--config` command shape itself.
+    That duplication is exactly how the missing `--config` bug happened
+    once already (see `run_turn`'s note below).
+
+    Deliberately does not raise on a nonzero exit, same reasoning as
+    `run_turn`.
+    """
+    config_path = workspace_folder / ".devcontainer" / subconfig_name / "devcontainer.json"
+    result = subprocess.run(
+        [
+            "devcontainer",
+            "exec",
+            "--workspace-folder",
+            str(workspace_folder),
+            "--config",
+            str(config_path),
+            "--",
+            *argv,
+        ],
+        input=input,
+        capture_output=True,
+        text=True,
+    )
+    return TurnResult(
+        exit_code=result.returncode, stdout=result.stdout, stderr=result.stderr
+    )
+
+
 def run_turn(workspace_folder: Path, subconfig_name: str, prompt: str) -> TurnResult:
     """Run one headless turn: `devcontainer exec --workspace-folder ...
     --config ... -- claude -p <prompt>`.
@@ -76,23 +118,4 @@ def run_turn(workspace_folder: Path, subconfig_name: str, prompt: str) -> TurnRe
     turn's explicit success/failure signal for the caller (the scheduler)
     to act on, not an exception to catch.
     """
-    config_path = workspace_folder / ".devcontainer" / subconfig_name / "devcontainer.json"
-    result = subprocess.run(
-        [
-            "devcontainer",
-            "exec",
-            "--workspace-folder",
-            str(workspace_folder),
-            "--config",
-            str(config_path),
-            "--",
-            "claude",
-            "-p",
-            prompt,
-        ],
-        capture_output=True,
-        text=True,
-    )
-    return TurnResult(
-        exit_code=result.returncode, stdout=result.stdout, stderr=result.stderr
-    )
+    return exec_in_container(workspace_folder, subconfig_name, ["claude", "-p", prompt])

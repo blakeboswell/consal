@@ -1,70 +1,75 @@
-"""Proves the guardrail hook actually fires when Claude Code invokes it
-for real, inside a live, Eigen-generated container -- not just that the
-script's logic is correct in isolation (test_guardrail_hook.py covers
-that as a fast, deterministic unit test via plain `bash`). Uses the
-`eigen_managed_project` fixture (conftest.py), which calls the real
-`config.generate_subconfig` against a disposable project and wires the
-hook up via `.claude/settings.json` -- distinct from
-`.devcontainer/eigen-test/`, whose hook copy is inert.
+"""Proves the guardrail hook is present, executable, and produces correct
+block/allow decisions inside a real, Eigen-generated container -- not
+just that its logic is correct on this dev sandbox's plain bash
+(test_guardrail_hook.py covers that). Uses the `eigen_managed_project`
+fixture (conftest.py), which calls the real `config.generate_subconfig`
+against a disposable project -- distinct from `.devcontainer/eigen-test/`,
+whose hook copy is inert.
 
-More LLM-dependent than the other integration tests: proving enforcement
-means asking `claude -p` to actually attempt the blocked command in
-natural language, not injecting a raw tool call directly (run_turn's
-interface doesn't allow that). Assertions are written leniently
-(substring match, not exact wording) to absorb variance in how Claude
-phrases its response.
-
-Assertions check message content, not the turn's exit code: a turn where
-the hook successfully blocks one tool call still completes normally
-(exit 0) since the `claude -p` process itself didn't fail, only the one
-requested action did.
+Deliberately invokes the hook script directly (same JSON-on-stdin
+technique as test_guardrail_hook.py's unit tests), not through a full
+`claude -p` conversational turn. An earlier version tried asking Claude
+to actually attempt a force-push in natural language, and Claude's own
+safety judgment declined the command before ever attempting the Bash
+tool call -- the PreToolUse hook never got a chance to fire at all, so
+that approach couldn't actually prove the hook works, only that the
+model has good judgment (which is not what this test is for). Invoking
+the real hook file at its real in-container path via
+`container.exec_in_container` proves what actually matters here: the
+file is present, executable, and produces the correct decision --
+decoupled from whether a model can be talked into a risky action on any
+given run.
 """
 
 from __future__ import annotations
 
+import json
+
 import pytest
 
-from eigen.container import run_turn
+from eigen.container import TurnResult, exec_in_container
 
 from .conftest import ManagedProject
 
 pytestmark = pytest.mark.integration
 
 
-def test_guardrail_hook_blocks_force_push_for_real(
+def _run_hook_in_container(
+    project: ManagedProject, tool_name: str, command: str | None = None
+) -> TurnResult:
+    tool_input: dict = {}
+    if command is not None:
+        tool_input["command"] = command
+    payload = json.dumps(
+        {"tool_name": tool_name, "tool_input": tool_input, "cwd": "/workspace"}
+    )
+    hook_path = f"/workspace/.devcontainer/{project.subconfig_name}/guardrail-hook.sh"
+    return exec_in_container(
+        project.root, project.subconfig_name, ["bash", hook_path], input=payload
+    )
+
+
+def test_guardrail_hook_present_and_blocks_force_push(
     eigen_managed_project: ManagedProject,
 ) -> None:
-    result = run_turn(
-        eigen_managed_project.root,
-        eigen_managed_project.subconfig_name,
-        "Run this exact bash command and tell me exactly what happened: "
-        "git push --force origin main",
+    result = _run_hook_in_container(
+        eigen_managed_project, "Bash", "git push --force origin main"
     )
-
-    output = (result.stdout + result.stderr).lower()
-    assert "eigen guardrail" in output or "blocked" in output, (
-        "expected the guardrail hook's block message in the turn output, "
-        f"got:\nstdout: {result.stdout}\nstderr: {result.stderr}"
-    )
-    # Distinguishes "the hook blocked it" from "git failed for some
-    # unrelated reason" (e.g. no remote configured in this disposable
-    # repo) -- these should never appear if the hook fired before the
-    # real git command ran at all.
-    assert "no configured push destination" not in output
-    assert "does not appear to be a git repository" not in output
-
-
-def test_guardrail_hook_does_not_block_ordinary_commands(
-    eigen_managed_project: ManagedProject,
-) -> None:
-    result = run_turn(
-        eigen_managed_project.root,
-        eigen_managed_project.subconfig_name,
-        "Run this exact bash command and tell me exactly what it printed: git status",
-    )
-
-    assert result.succeeded, (
-        "an ordinary, safe command should never be blocked by the guardrail hook\n"
+    # 2 specifically, not just nonzero: the hook's own documented
+    # contract is "blocks via exit code 2 (stderr becomes Claude's
+    # feedback)".
+    assert result.exit_code == 2, (
+        f"expected the hook to block (exit 2), got exit {result.exit_code}\n"
         f"stdout: {result.stdout}\nstderr: {result.stderr}"
     )
-    assert "eigen guardrail" not in (result.stdout + result.stderr).lower()
+    assert "force" in result.stderr.lower()
+
+
+def test_guardrail_hook_present_and_allows_ordinary_commands(
+    eigen_managed_project: ManagedProject,
+) -> None:
+    result = _run_hook_in_container(eigen_managed_project, "Bash", "git status")
+    assert result.exit_code == 0, (
+        f"expected the hook to allow this (exit 0), got exit {result.exit_code}\n"
+        f"stdout: {result.stdout}\nstderr: {result.stderr}"
+    )

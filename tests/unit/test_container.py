@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from eigen.container import TurnResult, ensure_container_up, run_turn
+from eigen.container import TurnResult, ensure_container_up, exec_in_container, run_turn
 
 
 def test_turn_result_succeeded_true_on_zero_exit() -> None:
@@ -49,9 +49,37 @@ def test_run_turn_builds_expected_command(mock_run: MagicMock) -> None:
             "-p",
             "implement issue #42",
         ],
+        input=None,
         capture_output=True,
         text=True,
     )
+
+
+@patch("eigen.container.subprocess.run")
+def test_exec_in_container_passes_input_through(mock_run: MagicMock) -> None:
+    mock_run.return_value = subprocess.CompletedProcess(
+        args=[], returncode=2, stdout="", stderr="blocked"
+    )
+    result = exec_in_container(
+        Path("/workspace"), "eigen", ["bash", "hook.sh"], input="payload"
+    )
+    mock_run.assert_called_once_with(
+        [
+            "devcontainer",
+            "exec",
+            "--workspace-folder",
+            "/workspace",
+            "--config",
+            "/workspace/.devcontainer/eigen/devcontainer.json",
+            "--",
+            "bash",
+            "hook.sh",
+        ],
+        input="payload",
+        capture_output=True,
+        text=True,
+    )
+    assert result == TurnResult(exit_code=2, stdout="", stderr="blocked")
 
 
 @patch("eigen.container.subprocess.run")
