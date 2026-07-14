@@ -1,0 +1,355 @@
+# Eigen: goals document for a self-driving development system
+
+## Context
+
+This grew out of frustration with `dco`, a bash tool for launching sandboxed
+devcontainers to run Claude Code (interactively, or unattended in an
+"autonomous mode" driven by GitHub Issues/PRs). Building it out surfaced a
+real pattern: bash-specific footguns (a `tr -c` pipe eating a newline into a
+literal character, a `false`-as-return-value bug tripping `set -e`), plus a
+test suite that was reactive (added after each live failure) and mocked away
+exactly the integration points that mattered, so real bugs kept surfacing
+only after multi-minute live Docker/GitHub cycles instead of before shipping.
+Documentation had also collapsed into README bloat: every incremental fix
+got a paragraph, instead of docstrings/commit messages/a real design doc at
+their appropriate altitudes.
+
+Rather than porting the bash 1:1 to Python, we stepped back to ask what the
+actual goal is, independent of how the current tool happens to implement it.
+This document is the result.
+
+Along the way we evaluated whether to adopt an existing tool instead of
+building anything (the "AI agent in a sandboxed container" space turned out
+to be crowded — see **Prior art** below). We also considered a Claude
+Agent-SDK-driven orchestrator vs. a thin CLI launcher as competing shapes
+for a single project. The actual resolution turned out to be neither: **two
+separate projects**, not one — see **Architecture** below. This is the
+single biggest structural decision in this document.
+
+This was originally produced as a plan-mode artifact inside the `dco` repo.
+The new project is named **Eigen** — a math term for the value that scales
+a vector's magnitude without changing its direction, matching the actual
+goal: multiplying one developer's output without taking over their
+direction. `dco` keeps its own name; only the new project needed one.
+
+## Architecture: two projects, not one
+
+- **`dco`** (existing, stays roughly as-is). Its job shrinks to exactly what
+  it already does well and what the user already understands deeply:
+  create a sandboxed devcontainer, keep it alive, reattach to it, manage
+  named sub-config profiles and persistent volumes. It's **fully
+  generic** — no built-in concept of "autonomous mode," GitHub, PATs, or
+  labels. **Update since this doc was first drafted:** the follow-up work
+  described below (stripping `--dsp`, the shipped `autonomous` profile,
+  the guardrail hook, PAT/label logic out of `dco`) is done. `dco.in` went
+  638 → 348 lines, its README 274 → ~90. `dco` today is exactly the
+  container-lifecycle tool described here, nothing more.
+- **Eigen** (new, Python). Owns everything about
+  GitHub-driven autonomy: the plan-then-decompose-then-autonomous-loop
+  workflow, repo/PAT setup, the label taxonomy, guardrails, scheduling, and
+  the hybrid interactive/async interaction model. It **depends on `dco`**
+  the way `dco` depends on `docker`/`gh`/`devcontainer` — shelling out to
+  it for container lifecycle, most likely via `dco`'s existing generic
+  `--sub-config` mechanism, providing its own custom profile/template
+  rather than relying on `dco` to know anything about it.
+
+Why this split, not one project: nearly every bug from the bash build lived
+in the autonomous-mode-specific logic, not in the container-lifecycle core.
+Separating them means the stable, already-trusted, already-understood part
+doesn't need a rewrite at all (bash's original "it's only N lines of code"
+argument is valid again once the scope that made it fragile moves out), and
+the part that actually needs Python's documentation/testing tooling is
+exactly the part that's complex and still evolving.
+
+## Prior art (why we're not adopting an existing tool)
+
+The "run Claude Code in an isolated Docker container behind an egress
+firewall" space already has multiple real implementations (`clawker`,
+`ClaudeBox`, `sandclaude`, `codex-lockbox`, `agentbox`), so "container
+isolation" alone isn't a differentiator. We looked closely at `clawker`
+specifically: a mature, actively-maintained Go project whose threat model
+("you can't reliably stop an agent from being prompt-injected, so strip the
+injection of any power to hurt you") matches this document's isolation
+goals almost exactly, and whose enforcement architecture is arguably
+*stronger* than `dco`'s — it uses eBPF to enforce the network boundary
+**outside** the container via a separate control-plane process, so the
+agent container has no path to its own firewall rules at all. `dco`'s
+firewall runs *inside* the container via a passwordless-sudo script — a
+real structural gap `clawker` closes. Decision: not adopting it (the user
+isn't interested), but worth remembering as a concrete example of a
+stronger enforcement model than `dco`'s current one, if `dco`'s firewall
+approach ever gets revisited. Separately, `clawker` doesn't touch GitHub
+orchestration at all — it only occupies the container-isolation niche, so
+even if it had been adopted, it wouldn't have overlapped with Eigen's
+actual scope.
+
+## Vision
+
+A self-driving development system: point it at a project idea, and it
+becomes a sandboxed AI collaborator you steer through GitHub's own
+developer-facing surface (issues, PRs, comments) — with an interactive
+channel always available as a direct escape hatch — while a container
+boundary keeps the blast radius small if it makes a mistake or is
+manipulated by adversarial content it encounters while working
+autonomously.
+
+## The workflow
+
+1. **Setup.** Create a container (via `dco`) and a GitHub repo for the
+   project idea.
+2. **Interactive planning.** A synchronous session (human + Claude,
+   attached to the container, talking directly — the existing `dco --claude`
+   interaction shape) produces a plan, written to the workspace as an
+   actual file and version-controlled with git. The plan is a living
+   artifact: not a rigid one-time spec, expected to evolve as the project
+   develops, not something frozen after this first session.
+3. **Autonomous operation.** The AI now acts with real GitHub agency, not
+   as a worker that only consumes issues someone else labeled: it
+   decomposes the plan into issues (high-level idea → components →
+   sub-components → issues, the ordinary way software gets broken down),
+   monitors and responds to issues the human files, and starts work on
+   issues — using GitHub the way a human developer on the team would.
+4. **Human oversight, ongoing.** The human watches GitHub (issues, PRs,
+   whatever project-management surface gets incorporated), reviews code,
+   and responds to issues to steer direction. The human can also attach to
+   the container directly at any time and talk to it — this channel never
+   goes away once autonomous operation starts; it's a steering wheel, not
+   just a bootstrap-phase tool.
+
+Steps 2-4 are Eigen's behavior, built on containers `dco`
+provides; step 1's container creation is literally just `dco`.
+
+## Interaction model
+
+Deliberately hybrid, not one mode or the other:
+
+- **Async / GitHub-native** for steady-state work: the AI's primary
+  interface for direction and review is issues and PRs, matching how a
+  human collaborator would actually be managed on a real team.
+- **Sync / interactive** for planning and for direct intervention: the
+  human can attach and talk to the container any time, and whatever gets
+  typed becomes the next turn in whatever's already running.
+
+This hybrid is Eigen's behavior, not something `dco` itself
+needs to know about — `dco` just keeps being able to launch/reattach to
+whatever container/profile Eigen set up, exactly as it does
+for any project today.
+
+## Isolation & safety goals
+
+The container's blast-radius containment has to hold against two distinct
+threats, not just one:
+
+- **Accidents.** The agent makes an ordinary mistake — bad code, an
+  unintended destructive command, scope creep.
+- **Adversarial hijacking.** The agent encounters adversarial content while
+  operating autonomously (a malicious page during research, a poisoned
+  dependency, injected instructions in an issue/PR comment) and is
+  manipulated into acting against the user's interest.
+
+Concretely, this means (carried forward from what `dco` already got right,
+restated as goals rather than implementation) — all achieved by Eigen
+supplying its own sub-config profile to `dco`, not by `dco` having
+built-in knowledge of any of this:
+
+- A real network boundary during autonomous operation: default-deny with an
+  explicit, narrow allowlist, not "open and hope."
+- A credential scoped to exactly the target repo, never the user's full
+  personal access — so a hijacked agent's reach is bounded even if it tries
+  to misuse its own credential.
+- A human is the only one who can actually merge code into the project.
+  The agent must never force-push, push directly to a protected branch, or
+  touch branch/repo protection settings — enforced at two independent
+  layers (a local guardrail as defense in depth, GitHub's own branch
+  protection as the real backstop), with the local layer never treated as
+  sufficient on its own.
+
+## Configurability as a goal
+
+Oversight granularity should be a tunable property of a project, not a
+fixed global policy: PR-only review is fine for a project that's going
+well, but the human should be able to dial in tighter, issue-level
+oversight for a project where PRs start missing the target. Same for how
+direct interactive intervention relates to whatever the agent is doing
+when the human drops in — pause-and-redirect vs. leave-a-note-for-later
+are both legitimate depending on the situation.
+
+This is a stated goal, explicitly **not** committed to for the first
+working version — see v1 scope below.
+
+## V1 scope (deliberately minimal, to get something working first)
+
+- **No issue-level gating.** The AI can file, comment on, and start any
+  issue — self-created while decomposing the plan, or human-filed —
+  without a "ready" label or other pre-approval step. The review
+  checkpoint is the PR, full stop.
+- **No special intervention orchestration.** Attaching and talking to the
+  container directly *is* the intervention mechanism. Whatever's typed
+  becomes the next conversational turn in whatever's already running — no
+  pause/queue/redirect machinery to build. This is close to free: it's
+  what a persistent, attachable session (via `dco`) already gives you.
+
+Both of these are explicitly named as v1 simplifications of a stated goal,
+not the goal itself — the configurability described above is real future
+scope, not something being quietly dropped.
+
+## Lessons carried forward from the bash implementation
+
+These held up as genuine engineering constraints independent of language or
+architecture — they're requirements on *whatever* gets built next
+(primarily Eigen, since that's where the equivalent complexity
+will live), not retrospective bash war stories:
+
+1. Config that references other files (a build file pointing at a
+   Dockerfile elsewhere, for instance) needs its *result* checked for
+   self-consistency — every referenced path actually exists — before
+   shipping, without needing a real container build to surface a gap.
+2. Anything that asserts an external resource is reachable (a network
+   allowlist entry, an API endpoint) needs an actual standing check that
+   it resolves/responds, not a one-time assertion taken on faith.
+3. Pasted secrets can be silently corrupted by terminal escape sequences;
+   sanitization needs to be verified against actual byte sequences, not
+   assumed correct because it looks reasonable.
+4. A function's success/failure needs to be explicit and intentional,
+   never an accidental side effect of whatever its last statement happens
+   to return.
+5. Retry logic is only correct paired with a way to independently verify
+   the thing being retried can succeed at all — otherwise "retry and skip"
+   just quietly hides a permanent failure forever.
+6. Mocked test infrastructure that never exercises the real underlying
+   tool can rack up a high test count while missing exactly the bugs that
+   matter. Test coverage needs to be evaluated against "would this have
+   caught the last few real bugs," not against a passing count.
+7. An autonomous agent doesn't act on its own instructions without an
+   explicit first turn, and "reattach and see if it's working" is a bad
+   way to discover whether it's actually running — idle and working look
+   identical from outside.
+
+## Decided
+
+- **SDK vs. CLI launcher (2026-07-14): CLI launcher.** Eigen drives Claude
+  by launching the `claude` CLI with a constructed prompt (e.g. "here's
+  issue #42, implement it"), the same shape as `dco`'s old bash autonomous
+  mode, and lets Claude Code's own agent loop handle the actual work — file
+  edits, tests, git, all of it. Eigen's own code is the orchestration layer
+  around that: watch GitHub, decide what's next, hand off a prompt, repeat.
+  Rejected alternative: the Claude Agent SDK, which would have Eigen
+  implement its own agent loop and tools in Python for full step-level
+  programmatic control. Rejected because it's substantially more
+  implementation effort to rebuild what Claude Code already provides, and
+  nothing in v1 scope needs step-level control — the PR is already the
+  review checkpoint. Revisit if the CLI approach's guardrails prove too
+  coarse in practice (e.g. if enforcing the "lessons carried forward"
+  constraints turns out to need hooks finer-grained than Claude Code's own
+  permission/hook system exposes).
+
+- **Eigen/`dco` interface (2026-07-14): plain `dco` + `devcontainer exec`,
+  never `--claude`, for autonomous turns.** `dco --claude`'s tmux/attach
+  path is interactive-only by construction — a human at a TTY, no defined
+  "done" signal — so it's reserved for step 2 (interactive planning) and
+  direct human intervention (step 4), never for autonomous turns.
+  - **Sub-config contents:** a directory, matching how `--sub-config`
+    already works — `.devcontainer/eigen/devcontainer.json` plus its own
+    allowlist entries (referencing the shared `../Dockerfile` /
+    `init-firewall.sh` `dco` already provides), plus the guardrail hook
+    script. All checked into the project's own repo like any other
+    sub-config, **except the PAT** — injected via `containerEnv` pointing
+    at a host env var or gitignored secrets file, never committed.
+  - **Profile vs. runtime state split:** the profile above is static,
+    checked-in config. Runtime state (active issue, loop status, logs) is
+    churny and lives outside git, in a host-side `~/.eigen/<project-id>/`
+    directory or volume — mirroring how `dco` already keeps `~/.claude`
+    out of the repo.
+  - **Headless invocation is not a `dco` gap.** Plain `dco --sub-config
+    eigen` (no `--claude`) just ensures the container is up — the
+    primitive `dco` already provides. Eigen drives each turn itself via
+    `devcontainer exec --workspace-folder ... -- claude -p "$PROMPT"`, a
+    public CLI Eigen is free to call directly. Growing `dco` a new
+    `--exec`-style flag would re-add autonomy-shaped surface to the tool
+    this project just spent effort stripping it out of.
+  - **Success/failure signal comes free:** `devcontainer exec` is a
+    synchronous foreground subprocess with a real exit code and captured
+    stdout/stderr, so lesson #4 (explicit return value) is satisfied by
+    construction — no idle-vs-working ambiguity, since Eigen is the one
+    blocking on the call.
+  - **Container reuse, not fresh-per-task:** one container persists for
+    the whole autonomous run, rebuilt only when the profile changes —
+    keeps `dco`'s existing persistence (`~/.claude` volume, bash history)
+    and avoids a container-build latency tax every loop turn. Named
+    tradeoff, not a free win: fresh-per-issue would bound cross-issue state
+    drift more tightly (a confused agent can't drag stale context from
+    issue N into issue N+1). Default to reuse for v1; revisit if drift
+    turns out to be a real problem.
+
+  Net effect: `dco`'s interface to Eigen stays exactly what it is today —
+  `dco` / `dco --sub-config <name>`, no new flags. Everything headless is
+  Eigen calling the public `devcontainer` CLI directly.
+
+- **Distribution model (2026-07-14): a small package, stdlib + subprocess
+  only.** This splits into two independent axes that the original framing
+  ("stdlib-only single file vs. a proper package") bundled together:
+  - **Dependency policy: stay stdlib + subprocess.** Eigen already depends
+    on `dco` by shelling out to it, the same way `dco` shells out to
+    `docker`/`gh`/`devcontainer`. Continue that pattern one level up:
+    Eigen talks to GitHub by shelling out to `gh` (parsing its JSON output
+    with stdlib `json`), not via `PyGithub`/`requests`. No third-party
+    runtime dependencies. Preserves the same auditability property that
+    motivated trimming `dco` itself down to ~350 lines — nothing to trust
+    beyond stdlib and the CLIs already being shelled out to.
+  - **File layout: a package (`src/eigen/`), not one file.** Breaks from
+    `dco`'s own single-file precedent, deliberately. The reason Eigen is
+    Python and not bash is that "the part that needs Python's
+    testing/documentation tooling is exactly the part that's complex and
+    evolving" — that only pays off with real module boundaries (GitHub
+    polling, prompt construction, guardrail checks, and the scheduling
+    loop are genuinely separate concerns). A single file fights the
+    unit/integration test split below.
+  - **No PyPI distribution needed** — single-user tool. `pipx install -e
+    .` (or bare `python3 -m eigen`) from the checkout is the whole story;
+    skip packaging ceremony beyond what `pyproject.toml`/pytest need.
+
+- **Testing strategy (2026-07-14): unit/integration split mapped directly
+  to the "lessons carried forward" list**, not discovered incrementally:
+  - Config self-consistency (referenced paths exist) → **unit**, tmp-dir
+    fixtures, fast and deterministic.
+  - Standing reachability check (allowlist/endpoints) → **unit-test the
+    checker logic** against mocked good/bad hosts. The live check itself
+    ships as a product feature (an `eigen doctor` command), not a CI
+    assertion — network state isn't CI's job to assert.
+  - Secret sanitization vs. terminal escape sequences → **unit**, against
+    real byte-sequence fixtures (actual ANSI/bracketed-paste bytes), never
+    mocked away — lesson #6 is a direct warning against exactly that.
+  - Explicit success/failure → convention + test pairing: every fallible
+    function gets a positive *and* negative test, backed by a lint rule
+    against bare `except`.
+  - Retry paired with independent verification → **integration-ish**,
+    simulate retry-with-a-fake-verifier and assert escalation on
+    "unrecoverable" instead of infinite retry.
+  - Mocked infra hiding real bugs (the meta-lesson) → a real **integration
+    tier** that hits actual `gh`/`dco`/`devcontainer` against a disposable
+    sandbox repo, not subprocess mocks.
+  - Idle vs. working ambiguity → mostly solved by construction now that
+    headless turns are synchronous `devcontainer exec` (see the `dco`
+    interface decision above); remaining piece is a scheduler-dispatch
+    unit test (given pending work, does the loop actually issue the call).
+
+  Mechanically: `pytest -m integration` as an opt-in marker, run
+  separately from the fast default suite — fast tier runs on every save,
+  the real-tools tier runs less often (pre-merge, not every commit),
+  directly fixing "multi-minute live Docker/GitHub cycles surfacing bugs
+  only after shipping." Coverage gets judged against "would this have
+  caught the last few real bugs" (lesson #6), not against a passing count.
+
+## Explicitly deferred (Eigen specifics, not yet decided)
+
+- **Documentation structure in detail.** Direction agreed (docstrings for
+  API-level detail, a lean README for quickstart/usage only, a separate
+  design doc for the "why," incremental fixes documented in commit
+  messages rather than accreted into the README) — specifics TBD.
+
+## Non-goals
+
+- Reimplementing GitHub's own issue/PR primitives.
+- `dco` reimplementing anything about GitHub, autonomy, or Claude Code's
+  own agentic-loop/scheduling primitives — that entire domain now belongs
+  to Eigen, not `dco`, by design.

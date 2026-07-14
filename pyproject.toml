@@ -1,0 +1,29 @@
+[project]
+name = "eigen"
+version = "0.1.0"
+description = "Self-driving development system: decomposes a plan into GitHub issues and works them autonomously inside a dco-managed container."
+authors = [
+    { name = "blake", email = "j.blake.boswell@gmail.com" }
+]
+requires-python = ">=3.11"
+dependencies = []
+
+[project.scripts]
+eigen = "eigen.cli:main"
+
+[build-system]
+requires = ["uv_build>=0.11.28,<0.12.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+markers = [
+    "integration: hits real gh/dco/devcontainer against a disposable sandbox repo; not run by default",
+]
+addopts = "-m 'not integration'"
