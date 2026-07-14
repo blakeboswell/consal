@@ -260,11 +260,18 @@ will live), not retrospective bash war stories:
     container's `claude-code-config-${DCO_PROJECT_ID}` volume has never
     logged in, so `claude -p` fails with "Not logged in" until
     authenticated some other way. `containerEnv` now also carries
-    `"ANTHROPIC_API_KEY": "${localEnv:ANTHROPIC_API_KEY}"`, same pattern
-    as the PAT — sourced from a host env var, never committed. Requires a
-    real Anthropic API key (separate from a Claude subscription/OAuth
-    login, with its own billing) to be set on any host actually running
-    Eigen-managed containers headlessly.
+    `"CLAUDE_CODE_OAUTH_TOKEN": "${localEnv:CLAUDE_CODE_OAUTH_TOKEN}"`,
+    same pattern as the PAT — sourced from a host env var, never
+    committed. Deliberately the subscription token (`claude setup-token`,
+    a year-long OAuth token billed against the Pro/Max/Team plan's usage
+    limits) rather than `ANTHROPIC_API_KEY` (separate, metered API
+    billing) — draws against an existing monthly plan instead of
+    incurring independent per-token charges. Named tradeoff: this shares
+    its usage pool with the user's own interactive Claude Code sessions,
+    unlike API-key billing, which never competes with personal usage but
+    costs money independently. Requires that token to be generated once
+    and set on any host actually running Eigen-managed containers
+    headlessly.
   - **Profile vs. runtime state split:** the profile above is static,
     checked-in config. Runtime state (active issue, loop status, logs) is
     churny and lives outside git, in a host-side `~/.eigen/<project-id>/`

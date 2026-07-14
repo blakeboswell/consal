@@ -67,18 +67,26 @@ def test_dco_supports_up_only() -> None:
     )
 
 
-def test_anthropic_api_key_is_set() -> None:
+def test_claude_code_oauth_token_is_set() -> None:
     """Every Eigen-generated devcontainer.json injects
-    `"ANTHROPIC_API_KEY": "${localEnv:ANTHROPIC_API_KEY}"` (see the
-    correction in EIGEN_GOALS.md's "Eigen/dco interface" decision) so
+    `"CLAUDE_CODE_OAUTH_TOKEN": "${localEnv:CLAUDE_CODE_OAUTH_TOKEN}"` (see
+    the correction in EIGEN_GOALS.md's "Eigen/dco interface" decision) so
     `claude -p` can authenticate headlessly instead of failing with
     "Not logged in" — found missing via a real run_turn integration test
-    failure, not designed upfront. This env var has to actually be set on
-    the host for that to work.
+    failure, not designed upfront.
+
+    Deliberately the subscription token (`claude setup-token`, a
+    year-long OAuth token billed against the Pro/Max/Team plan's usage
+    limits), not `ANTHROPIC_API_KEY` (separate, metered API billing) —
+    the user's choice, since it draws against an existing monthly plan
+    instead of incurring independent per-token charges. Tradeoff worth
+    remembering: this shares its usage pool with the user's own
+    interactive Claude Code sessions, unlike API-key billing.
     """
-    assert os.environ.get("ANTHROPIC_API_KEY"), (
-        "ANTHROPIC_API_KEY is not set on this host — every Eigen-managed "
-        "container's containerEnv references it via "
-        "${localEnv:ANTHROPIC_API_KEY}, so claude -p will fail with "
-        "'Not logged in' inside any container built without it"
+    assert os.environ.get("CLAUDE_CODE_OAUTH_TOKEN"), (
+        "CLAUDE_CODE_OAUTH_TOKEN is not set on this host — every "
+        "Eigen-managed container's containerEnv references it via "
+        "${localEnv:CLAUDE_CODE_OAUTH_TOKEN}, so claude -p will fail with "
+        "'Not logged in' inside any container built without it. Generate "
+        "one with `claude setup-token` (valid for a year)."
     )
