@@ -255,6 +255,16 @@ will live), not retrospective bash war stories:
     script. All checked into the project's own repo like any other
     sub-config, **except the PAT** — injected via `containerEnv` pointing
     at a host env var or gitignored secrets file, never committed.
+    **Correction (2026-07-14):** the same applies to Claude's own
+    credentials, found missing via a real integration test run — a fresh
+    container's `claude-code-config-${DCO_PROJECT_ID}` volume has never
+    logged in, so `claude -p` fails with "Not logged in" until
+    authenticated some other way. `containerEnv` now also carries
+    `"ANTHROPIC_API_KEY": "${localEnv:ANTHROPIC_API_KEY}"`, same pattern
+    as the PAT — sourced from a host env var, never committed. Requires a
+    real Anthropic API key (separate from a Claude subscription/OAuth
+    login, with its own billing) to be set on any host actually running
+    Eigen-managed containers headlessly.
   - **Profile vs. runtime state split:** the profile above is static,
     checked-in config. Runtime state (active issue, loop status, logs) is
     churny and lives outside git, in a host-side `~/.eigen/<project-id>/`

@@ -20,7 +20,8 @@
   "containerEnv": {
     "NODE_OPTIONS": "--max-old-space-size=4096",
     "CLAUDE_CONFIG_DIR": "/home/node/.claude",
-    "GH_TOKEN": "${localEnv:EIGEN_GH_PAT}"
+    "GH_TOKEN": "${localEnv:EIGEN_GH_PAT}",
+    "ANTHROPIC_API_KEY": "${localEnv:ANTHROPIC_API_KEY}"
   },
   "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=delegated",
   "workspaceFolder": "/workspace",

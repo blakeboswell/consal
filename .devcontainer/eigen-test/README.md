@@ -9,6 +9,12 @@ only to satisfy `validate_subconfig`'s check, not because this fixture
 exercises hook enforcement); this fixture only needs to prove the
 container comes up and `devcontainer exec ... -- claude -p` works.
 
+Does carry `"ANTHROPIC_API_KEY": "${localEnv:ANTHROPIC_API_KEY}"` in
+`containerEnv`, though — without it `claude -p` fails with "Not logged in"
+regardless of everything else working (found via a real integration test
+run, not designed upfront). Requires that env var actually set on the
+host running the integration suite.
+
 Shares `../Dockerfile` (and therefore `../allowlist.txt`, and
 `../init-firewall.sh`) with the default profile — see the comment at the
 top of `../init-firewall.sh` for why a sub-config pointing `dockerfile` at

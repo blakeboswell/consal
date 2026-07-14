@@ -11,6 +11,7 @@ memory note), so `dco`/`devcontainer` aren't reachable from in there.
 
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess
 
@@ -63,4 +64,21 @@ def test_dco_supports_up_only() -> None:
     assert "--up-only" in help_text, (
         "dco --help doesn't mention --up-only yet — this host's dco build "
         "predates the flag Eigen's headless bring-up depends on"
+    )
+
+
+def test_anthropic_api_key_is_set() -> None:
+    """Every Eigen-generated devcontainer.json injects
+    `"ANTHROPIC_API_KEY": "${localEnv:ANTHROPIC_API_KEY}"` (see the
+    correction in EIGEN_GOALS.md's "Eigen/dco interface" decision) so
+    `claude -p` can authenticate headlessly instead of failing with
+    "Not logged in" — found missing via a real run_turn integration test
+    failure, not designed upfront. This env var has to actually be set on
+    the host for that to work.
+    """
+    assert os.environ.get("ANTHROPIC_API_KEY"), (
+        "ANTHROPIC_API_KEY is not set on this host — every Eigen-managed "
+        "container's containerEnv references it via "
+        "${localEnv:ANTHROPIC_API_KEY}, so claude -p will fail with "
+        "'Not logged in' inside any container built without it"
     )
