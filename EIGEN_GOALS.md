@@ -379,6 +379,44 @@ will live), not retrospective bash war stories:
   only after shipping." Coverage gets judged against "would this have
   caught the last few real bugs" (lesson #6), not against a passing count.
 
+- **Guardrail hook ownership (2026-07-14): authored fresh in Eigen, no
+  Python-side reimplementation.** The local-guardrail layer from
+  "Isolation & safety goals" (block `git push --force`, direct pushes to
+  `main`/`master`, `gh pr merge`, branch-protection tampering, `gh secret
+  set`) is a Claude Code `PreToolUse` hook — which has to be a shell
+  command, since that's the interface Claude Code's hook system calls.
+  There is no legitimate Python equivalent to build: a parallel policy
+  checker in Eigen's own code would never actually run in the enforcement
+  path, since Eigen (orchestrating from outside the container via
+  `devcontainer exec`) has no visibility into individual Bash tool calls
+  Claude Code makes mid-turn — it only ever sees a turn's aggregate exit
+  code. Building one anyway would be dead code that could silently drift
+  from what's real: the same failure shape as the `DCO_PROJECT_ID`
+  mistake above, just one layer up.
+
+  A `guardrails.py` module was scaffolded early on assuming otherwise and
+  has been deleted. The policy itself is genuinely autonomy-specific (not
+  something `dco` should know about, consistent with the whole
+  architecture split), so it's authored and owned as a static template in
+  Eigen: `src/eigen/templates/guardrail-hook.sh`, hand-written, ~10
+  pattern checks, no generation from a Python policy DSL.
+  `config.generate_subconfig` copies it into each managed project's
+  `.devcontainer/<name>/` and writes a `.claude/settings.json` at the
+  project root registering it as a `PreToolUse` hook;
+  `config.validate_subconfig` checks the copy is actually present.
+  Tested by shelling out to the real script with sample tool-call JSON on
+  stdin (both block- and allow-cases) — lesson #6 directly on point: a
+  Python reimplementation of the rules would test logic the real hook
+  never runs.
+
+  (An earlier version of this correction assumed there was an existing
+  bash hook artifact in `dco`'s own tree to defer to, found in this
+  repo's own `.devcontainer/autonomous-guardrail-hook.sh`. That file
+  turned out to be stale content left over from before `dco`'s `--dsp`
+  strip — not present in `dco`'s current tree at all — and has been
+  deleted from here too. The policy was sound; the ownership conclusion
+  it implied wasn't.)
+
 ## Explicitly deferred (Eigen specifics, not yet decided)
 
 - **Documentation structure in detail.** Direction agreed (docstrings for

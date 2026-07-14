@@ -3,9 +3,11 @@
 Fixture for `tests/integration/test_container.py` — exercises
 `ensure_container_up`/`run_turn` against a real `dco`/`devcontainer`
 container. Not the production "eigen" sub-config `config.generate_subconfig`
-will eventually produce (that one still needs its own guardrail hook and PAT
-injection); this one only needs to prove the container comes up and
-`devcontainer exec ... -- claude -p` works.
+produces (this one has no PAT injection, and its own copy of
+`guardrail-hook.sh` isn't wired up via `.claude/settings.json` — it's here
+only to satisfy `validate_subconfig`'s check, not because this fixture
+exercises hook enforcement); this fixture only needs to prove the
+container comes up and `devcontainer exec ... -- claude -p` works.
 
 Shares `../Dockerfile` (and therefore `../allowlist.txt`, and
 `../init-firewall.sh`) with the default profile — see the comment at the
