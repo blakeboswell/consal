@@ -30,16 +30,27 @@ class TurnResult:
         return self.exit_code == 0
 
 
-def ensure_container_up(subconfig_name: str) -> None:
-    """Run `dco --sub-config <subconfig_name> --up-only` to bring the
-    container up without attaching.
+def ensure_container_up(workspace_folder: Path, subconfig_name: str) -> None:
+    """Run `dco <workspace_folder> --sub-config <subconfig_name> --up-only`
+    to bring the container up without attaching.
+
+    Takes `workspace_folder` explicitly (matching `run_turn`) rather than
+    relying on the calling process's cwd matching dco's positional `[path]`
+    argument implicitly.
 
     Raises `subprocess.CalledProcessError` if `dco` fails — bringing the
     container up is a precondition for everything that follows, so failure
     here must stop the caller rather than be silently absorbed.
     """
     subprocess.run(
-        ["dco", "--sub-config", subconfig_name, "--up-only"], check=True
+        [
+            "dco",
+            str(workspace_folder),
+            "--sub-config",
+            subconfig_name,
+            "--up-only",
+        ],
+        check=True,
     )
 
 

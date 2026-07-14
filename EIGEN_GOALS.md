@@ -292,8 +292,11 @@ will live), not retrospective bash war stories:
     up`, git config sync), then exits 0/1 instead of exec'ing a shell.
     Still squarely container-lifecycle, not autonomy-shaped surface, so
     it doesn't violate the reasoning that ruled out a `--exec`-style flag
-    on `dco` (below). `ensure_container_up` becomes `dco --sub-config
-    <name> --up-only`. `DCO_PROJECT_ID` is consumed only at `devcontainer
+    on `dco` (below). `ensure_container_up` becomes `dco <workspace_folder>
+    --sub-config <name> --up-only` — the workspace path passed explicitly,
+    matching `run_turn`'s `--workspace-folder`, rather than relying on the
+    calling process's cwd matching dco's positional `[path]` argument
+    implicitly. `DCO_PROJECT_ID` is consumed only at `devcontainer
     up` time, so Eigen's per-turn `run_turn` needs no knowledge of it at
     all — the rest of this decision (per-turn `devcontainer exec ... --
     claude -p`, synchronous exit-code signal, container reuse) stands

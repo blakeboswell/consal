@@ -17,9 +17,9 @@ def test_turn_result_succeeded_false_on_nonzero_exit() -> None:
 
 @patch("eigen.container.subprocess.run")
 def test_ensure_container_up_invokes_dco_sub_config(mock_run: MagicMock) -> None:
-    ensure_container_up("eigen")
+    ensure_container_up(Path("/workspace"), "eigen")
     mock_run.assert_called_once_with(
-        ["dco", "--sub-config", "eigen", "--up-only"], check=True
+        ["dco", "/workspace", "--sub-config", "eigen", "--up-only"], check=True
     )
 
 
@@ -27,7 +27,7 @@ def test_ensure_container_up_invokes_dco_sub_config(mock_run: MagicMock) -> None
 def test_ensure_container_up_propagates_dco_failure(mock_run: MagicMock) -> None:
     mock_run.side_effect = subprocess.CalledProcessError(returncode=1, cmd=["dco"])
     with pytest.raises(subprocess.CalledProcessError):
-        ensure_container_up("eigen")
+        ensure_container_up(Path("/workspace"), "eigen")
 
 
 @patch("eigen.container.subprocess.run")
