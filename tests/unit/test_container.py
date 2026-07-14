@@ -19,7 +19,7 @@ def test_turn_result_succeeded_false_on_nonzero_exit() -> None:
 def test_ensure_container_up_invokes_dco_sub_config(mock_run: MagicMock) -> None:
     ensure_container_up("eigen")
     mock_run.assert_called_once_with(
-        ["dco", "--sub-config", "eigen"], check=True
+        ["dco", "--sub-config", "eigen", "--up-only"], check=True
     )
 
 

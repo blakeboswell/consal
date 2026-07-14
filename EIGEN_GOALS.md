@@ -260,13 +260,48 @@ will live), not retrospective bash war stories:
     churny and lives outside git, in a host-side `~/.eigen/<project-id>/`
     directory or volume — mirroring how `dco` already keeps `~/.claude`
     out of the repo.
-  - **Headless invocation is not a `dco` gap.** Plain `dco --sub-config
-    eigen` (no `--claude`) just ensures the container is up — the
-    primitive `dco` already provides. Eigen drives each turn itself via
-    `devcontainer exec --workspace-folder ... -- claude -p "$PROMPT"`, a
-    public CLI Eigen is free to call directly. Growing `dco` a new
-    `--exec`-style flag would re-add autonomy-shaped surface to the tool
-    this project just spent effort stripping it out of.
+  - **Headless bring-up needed one small additive flag on `dco`:
+    `--up-only`.** **Correction (2026-07-14):** the original version of
+    this bullet assumed plain `dco --sub-config eigen` (no `--claude`)
+    already just ensures the container is up and returns. Reading `dco`'s
+    actual source (`dco.in`) showed that's wrong — every path through
+    `main()` ends by exec'ing an interactive shell or the `--claude` tmux
+    session; there was no headless "bring it up, don't attach" mode at
+    all. The real primitive `dco` uses internally is `devcontainer up
+    --workspace-folder ... --config ...`, immediately followed by two
+    things Eigen would otherwise have had to reimplement to call that
+    directly itself:
+    - `DCO_PROJECT_ID`, a hash of workspace path + sub-config name
+      (`project_id()` in `dco.in`) that `devcontainer.json`'s
+      `${localEnv:DCO_PROJECT_ID:default}` mount sources consume **only
+      at `devcontainer up` time**, never again by `devcontainer exec`.
+      Reimplementing that hash in Python would create two copies with
+      nothing enforcing they stay byte-for-byte identical forever — a
+      drift silently forks every project's volumes (old data orphaned
+      under the old hash). Exactly the silent-self-consistency failure
+      lesson #1 warns about, and worse than most instances of it because
+      it fails silently rather than loudly.
+    - Git identity sync (`git config --global user.name`/`user.email`,
+      read from the host) — `dco` already owns this; a second copy in
+      Eigen has to be kept in lockstep by hand.
+
+    So instead of Eigen reaching around `dco` to call `devcontainer up`
+    directly, `dco` gets one small, additive flag: `--up-only` — runs
+    everything `main()` already does up through git-identity sync
+    (scaffold/self-heal, compute+export `DCO_PROJECT_ID`, `devcontainer
+    up`, git config sync), then exits 0/1 instead of exec'ing a shell.
+    Still squarely container-lifecycle, not autonomy-shaped surface, so
+    it doesn't violate the reasoning that ruled out a `--exec`-style flag
+    on `dco` (below). `ensure_container_up` becomes `dco --sub-config
+    <name> --up-only`. `DCO_PROJECT_ID` is consumed only at `devcontainer
+    up` time, so Eigen's per-turn `run_turn` needs no knowledge of it at
+    all — the rest of this decision (per-turn `devcontainer exec ... --
+    claude -p`, synchronous exit-code signal, container reuse) stands
+    unchanged. Eigen still drives each turn itself via `devcontainer exec
+    --workspace-folder ... -- claude -p "$PROMPT"`, a public CLI Eigen is
+    free to call directly — growing `dco` a new `--exec`-style flag would
+    re-add autonomy-shaped surface to the tool this project just spent
+    effort stripping it out of.
   - **Success/failure signal comes free:** `devcontainer exec` is a
     synchronous foreground subprocess with a real exit code and captured
     stdout/stderr, so lesson #4 (explicit return value) is satisfied by
@@ -281,9 +316,10 @@ will live), not retrospective bash war stories:
     issue N into issue N+1). Default to reuse for v1; revisit if drift
     turns out to be a real problem.
 
-  Net effect: `dco`'s interface to Eigen stays exactly what it is today —
-  `dco` / `dco --sub-config <name>`, no new flags. Everything headless is
-  Eigen calling the public `devcontainer` CLI directly.
+  Net effect: `dco`'s interface to Eigen is almost exactly what it is
+  today, plus one small additive flag — `dco --sub-config <name>
+  --up-only` for bring-up. Every per-turn call after that is Eigen calling
+  the public `devcontainer` CLI directly.
 
 - **Distribution model (2026-07-14): a small package, stdlib + subprocess
   only.** This splits into two independent axes that the original framing

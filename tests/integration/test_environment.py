@@ -46,3 +46,18 @@ def test_gh_is_authenticated() -> None:
         ["gh", "auth", "status"], capture_output=True, text=True
     )
     assert result.returncode == 0, result.stderr
+
+
+def test_dco_supports_up_only() -> None:
+    """`container.ensure_container_up` needs `dco --sub-config <name>
+    --up-only`, a flag added to `dco` specifically for Eigen's headless
+    bring-up (see the correction in EIGEN_GOALS.md's "Eigen/dco interface"
+    decision — plain `dco` always attaches interactively and has no
+    headless mode of its own). Fails until that flag has landed on the
+    `dco` build installed on this host.
+    """
+    result = subprocess.run(["dco", "--help"], capture_output=True, text=True)
+    assert "--up-only" in result.stdout, (
+        "dco --help doesn't mention --up-only yet — this host's dco build "
+        "predates the flag Eigen's headless bring-up depends on"
+    )
