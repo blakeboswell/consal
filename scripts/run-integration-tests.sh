@@ -7,6 +7,16 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
+# CLAUDE_CODE_OAUTH_TOKEN is host-wide and personal, not eigen-specific,
+# so it deliberately isn't auto-loaded into every shell (unlike
+# EIGEN_GH_PAT, which lives in this repo's own gitignored .envrc via
+# direnv) -- pulled in here, scoped to just running tests.
+SECRETS_FILE="${EIGEN_SECRETS_FILE:-$HOME/.config/claude-code/secrets.env}"
+if [[ -f "$SECRETS_FILE" ]]; then
+  # shellcheck disable=SC1090
+  source "$SECRETS_FILE"
+fi
+
 mkdir -p .integration-results
 out_file=".integration-results/latest.txt"
 
