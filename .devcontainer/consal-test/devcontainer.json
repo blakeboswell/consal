@@ -1,5 +1,5 @@
 {
-  "name": "Eigen",
+  "name": "Consal Integration Test Fixture",
   "build": {
     "dockerfile": "../Dockerfile",
     "args": {
@@ -16,12 +16,11 @@
   "mounts": [
     "source=claude-code-bashhistory-${localEnv:DCO_PROJECT_ID:default},target=/commandhistory,type=volume",
     "source=claude-code-config-${localEnv:DCO_PROJECT_ID:default},target=/home/node/.claude,type=volume",
-    "source=${localWorkspaceFolder}/.devcontainer/__SUBCONFIG_NAME__/allowlist.txt,target=/usr/local/etc/dco-allowlist.txt,type=bind"
+    "source=${localWorkspaceFolder}/.devcontainer/consal-test/allowlist.txt,target=/usr/local/etc/dco-allowlist.txt,type=bind"
   ],
   "containerEnv": {
     "NODE_OPTIONS": "--max-old-space-size=4096",
     "CLAUDE_CONFIG_DIR": "/home/node/.claude",
-    "GH_TOKEN": "${localEnv:EIGEN_GH_PAT}",
     "CLAUDE_CODE_OAUTH_TOKEN": "${localEnv:CLAUDE_CODE_OAUTH_TOKEN}"
   },
   "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=delegated",

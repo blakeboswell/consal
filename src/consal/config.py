@@ -1,20 +1,20 @@
-"""Generate and self-consistency-check Eigen's `dco` sub-config profiles.
+"""Generate and self-consistency-check Consal's `dco` sub-config profiles.
 
-Lesson carried forward (EIGEN_GOALS.md): a config's *result* must be
+Lesson carried forward (CONSAL_GOALS.md): a config's *result* must be
 checked for self-consistency — every referenced path actually exists —
 before it's ever handed to `dco`, without needing a real container build
 to surface a gap.
 
 The guardrail hook shipped here (`templates/guardrail-hook.sh`) is
-autonomy-specific policy, so it's authored and owned in Eigen, not `dco` —
-see EIGEN_GOALS.md's architecture rationale and the correction under
-"Eigen/`dco` interface" (there's no Python-side reimplementation of this
+autonomy-specific policy, so it's authored and owned in Consal, not `dco`
+— see CONSAL_GOALS.md's architecture rationale and the correction under
+"Consal/`dco` interface" (there's no Python-side reimplementation of this
 policy: a Claude Code `PreToolUse` hook has to be a shell command, so a
 parallel Python checker would never run in the real enforcement path).
 
 `templates/allowlist.txt` is bind-mounted over the shared, empty
 top-level `.devcontainer/allowlist.txt` at container-start (see
-`devcontainer.json`'s `mounts` entry) — see EIGEN_GOALS.md's "Isolation &
+`devcontainer.json`'s `mounts` entry) — see CONSAL_GOALS.md's "Isolation &
 safety goals" correction: this locks down egress specifically for
 containers carrying `CLAUDE_CODE_OAUTH_TOKEN`, without touching the
 default profile's own (currently open) firewall posture.
@@ -64,13 +64,13 @@ def validate_subconfig(subconfig_dir: Path) -> list[str]:
 
 def generate_subconfig(project_root: Path, subconfig_name: str) -> Path:
     """Stamp out a `.devcontainer/<subconfig_name>/` sub-config for a
-    project Eigen manages, plus a `.claude/settings.json` at the project
+    project Consal manages, plus a `.claude/settings.json` at the project
     root registering the guardrail hook as a `PreToolUse` hook.
 
     Copies the packaged templates (devcontainer.json shares `../Dockerfile`
-    with the project's default profile — see EIGEN_GOALS.md's "Eigen/`dco`
+    with the project's default profile — see CONSAL_GOALS.md's "Consal/`dco`
     interface" decision; the PAT itself is never written here, only
-    referenced via `containerEnv`'s `${localEnv:EIGEN_GH_PAT}`, so it's the
+    referenced via `containerEnv`'s `${localEnv:CONSAL_GH_PAT}`, so it's the
     caller's job to set that env var on the host, never to commit it).
     devcontainer.json isn't copied verbatim: it carries a
     `__SUBCONFIG_NAME__` placeholder in its allowlist bind-mount source

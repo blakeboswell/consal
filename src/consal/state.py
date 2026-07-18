@@ -1,8 +1,8 @@
-"""Runtime state for an Eigen-managed project: active issue, loop status, logs.
+"""Runtime state for a Consal-managed project: active issue, loop status, logs.
 
-Lives outside git, in a host-side `~/.eigen/<project_id>/` directory,
+Lives outside git, in a host-side `~/.consal/<project_id>/` directory,
 deliberately separate from the static sub-config profile checked into the
-project's own repo — see EIGEN_GOALS.md, "Eigen/`dco` interface" >
+project's own repo — see CONSAL_GOALS.md, "Consal/`dco` interface" >
 profile-vs-runtime-state split.
 
 `read_active_issue`/`write_active_issue` take the state directory itself
@@ -19,7 +19,7 @@ from pathlib import Path
 
 
 def state_dir(project_id: str) -> Path:
-    return Path.home() / ".eigen" / project_id
+    return Path.home() / ".consal" / project_id
 
 
 def _active_issue_file(state_dir: Path) -> Path:

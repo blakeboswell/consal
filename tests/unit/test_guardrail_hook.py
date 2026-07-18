@@ -2,8 +2,8 @@
 reimplementation of its rules. A Claude Code PreToolUse hook has to be a
 shell command; a parallel Python policy checker would never run in the
 actual enforcement path, so there's nothing to unit test except the real
-artifact (lesson #6, EIGEN_GOALS.md: mocked infra that never exercises the
-real underlying tool misses exactly the bugs that matter). Needs only
+artifact (lesson #6, CONSAL_GOALS.md: mocked infra that never exercises
+the real underlying tool misses exactly the bugs that matter). Needs only
 bash + jq, both present in this sandbox, so this runs as a fast unit test
 despite shelling out to a real subprocess.
 """
@@ -14,7 +14,7 @@ import json
 import subprocess
 from pathlib import Path
 
-HOOK = Path(__file__).resolve().parents[2] / "src" / "eigen" / "templates" / "guardrail-hook.sh"
+HOOK = Path(__file__).resolve().parents[2] / "src" / "consal" / "templates" / "guardrail-hook.sh"
 
 
 def run_hook(tool_name: str, command: str | None = None, cwd: str = "/workspace") -> subprocess.CompletedProcess:
@@ -81,7 +81,7 @@ def test_blocks_explicit_push_to_master() -> None:
 def _init_repo_with_commit(repo: Path, branch: str) -> None:
     # git rev-parse --abbrev-ref HEAD fails (falls back to the literal
     # string "HEAD") on an unborn branch with zero commits -- verified
-    # directly rather than assumed. A real Eigen-managed project always
+    # directly rather than assumed. A real Consal-managed project always
     # has at least one commit before autonomous work starts, so this
     # fixture matches realistic state rather than an edge case the hook
     # isn't meant to cover (it's a backstop, not the primary mechanism;

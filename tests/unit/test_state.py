@@ -3,12 +3,12 @@ from unittest.mock import patch
 
 import pytest
 
-from eigen.state import read_active_issue, state_dir, write_active_issue
+from consal.state import read_active_issue, state_dir, write_active_issue
 
 
 def test_state_dir_is_under_home_and_project_id() -> None:
-    with patch("eigen.state.Path.home", return_value=Path("/home/testuser")):
-        assert state_dir("my-project") == Path("/home/testuser/.eigen/my-project")
+    with patch("consal.state.Path.home", return_value=Path("/home/testuser")):
+        assert state_dir("my-project") == Path("/home/testuser/.consal/my-project")
 
 
 def test_read_active_issue_returns_none_when_no_file(tmp_path: Path) -> None:

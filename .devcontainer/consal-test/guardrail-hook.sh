@@ -1,24 +1,25 @@
 #!/bin/bash
-# PreToolUse hook (Bash matcher) for Eigen-managed autonomous sessions.
+# PreToolUse hook (Bash matcher) for Consal-managed autonomous sessions.
 #
 # Hard-blocks the handful of git/gh operations that are never legitimate
-# under Eigen's PR-only autonomous workflow (see EIGEN_GOALS.md, "Isolation
-# & safety goals" -- a human is the only one who can merge code or touch
-# branch/repo protection). This fires even under
+# under Consal's PR-only autonomous workflow (see CONSAL_GOALS.md,
+# "Isolation & safety goals" -- a human is the only one who can merge
+# code or touch branch/repo protection). This fires even under
 # --dangerously-skip-permissions: hooks are a separate enforcement layer
 # from the permission system.
 #
 # Deliberately narrow and a backstop, not the primary safety mechanism --
-# GitHub's own branch protection is that (EIGEN_GOALS.md: "the local layer
-# never treated as sufficient on its own"). Does not block all pushes or
-# all CI-workflow-file edits; the PR-review checkpoint covers those.
+# GitHub's own branch protection is that (CONSAL_GOALS.md: "the local
+# layer never treated as sufficient on its own"). Does not block all
+# pushes or all CI-workflow-file edits; the PR-review checkpoint covers
+# those.
 #
 # Blocks via exit code 2 (stderr becomes Claude's feedback). Malformed
 # input fails open (exit 0) rather than blocking legitimate work on a
 # parse error.
 #
 # This policy is autonomy-specific, so it's authored and owned here in
-# Eigen, not in dco -- dco stays generic (see EIGEN_GOALS.md's
+# Consal, not in dco -- dco stays generic (see CONSAL_GOALS.md's
 # architecture rationale). config.generate_subconfig copies this file
 # as-is into each managed project's sub-config directory.
 
@@ -34,7 +35,7 @@ PROJECT_DIR="$(printf '%s' "$INPUT" | jq -r '.cwd // empty' 2>/dev/null || true)
 PROJECT_DIR="${PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-/workspace}}"
 
 block() {
-  echo "eigen guardrail: blocked — $1" >&2
+  echo "consal guardrail: blocked — $1" >&2
   exit 2
 }
 

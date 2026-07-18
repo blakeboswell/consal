@@ -9,16 +9,16 @@ from pathlib import Path
 
 import pytest
 
-from eigen.config import generate_subconfig
-from eigen.container import ensure_container_up
+from consal.config import generate_subconfig
+from consal.container import ensure_container_up
 
-SUBCONFIG_NAME = "eigen"
+SUBCONFIG_NAME = "consal"
 
 
 @dataclass(frozen=True)
 class ManagedProject:
     """Bundles what `run_turn`/`ensure_container_up` both need, so tests
-    using `eigen_managed_project` don't have to import or hardcode the
+    using `consal_managed_project` don't have to import or hardcode the
     sub-config name separately from the project root.
     """
 
@@ -27,13 +27,13 @@ class ManagedProject:
 
 
 @pytest.fixture
-def eigen_managed_project(tmp_path: Path) -> Iterator[ManagedProject]:
-    """A disposable git repo with a real Eigen-generated sub-config
-    (.devcontainer/eigen/, .claude/settings.json with the guardrail hook
+def consal_managed_project(tmp_path: Path) -> Iterator[ManagedProject]:
+    """A disposable git repo with a real Consal-generated sub-config
+    (.devcontainer/consal/, .claude/settings.json with the guardrail hook
     registered) and a live container already up, via the real
     `config.generate_subconfig` + `container.ensure_container_up`.
 
-    Distinct from `.devcontainer/eigen-test/`: that fixture's copy of
+    Distinct from `.devcontainer/consal-test/`: that fixture's copy of
     guardrail-hook.sh is inert (no .claude/settings.json wiring it up),
     kept only to satisfy `validate_subconfig`. This fixture is for tests
     that need the whole thing working end to end, not just container
@@ -55,11 +55,11 @@ def eigen_managed_project(tmp_path: Path) -> Iterator[ManagedProject]:
         ["git", "init", "-b", "main", str(tmp_path)], check=True, capture_output=True
     )
     subprocess.run(
-        ["git", "-C", str(tmp_path), "config", "user.email", "eigen-test@example.com"],
+        ["git", "-C", str(tmp_path), "config", "user.email", "consal-test@example.com"],
         check=True,
     )
     subprocess.run(
-        ["git", "-C", str(tmp_path), "config", "user.name", "Eigen Integration Test"],
+        ["git", "-C", str(tmp_path), "config", "user.name", "Consal Integration Test"],
         check=True,
     )
     subprocess.run(

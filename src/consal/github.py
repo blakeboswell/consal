@@ -1,9 +1,9 @@
 """Thin wrapper over the `gh` CLI for issue/PR/comment operations.
 
-Eigen shells out to `gh` rather than depending on a GitHub API library —
+Consal shells out to `gh` rather than depending on a GitHub API library —
 matches `dco`'s own pattern of shelling out to external tools, and keeps
-Eigen's runtime dependency footprint at stdlib + subprocess only (see
-EIGEN_GOALS.md, "Distribution model").
+Consal's runtime dependency footprint at stdlib + subprocess only (see
+CONSAL_GOALS.md, "Distribution model").
 
 Every call here uses `check=True`: a `gh` failure (bad repo, auth, network)
 is a hard error the caller needs to know about immediately, not a

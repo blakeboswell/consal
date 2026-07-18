@@ -1,6 +1,6 @@
 """The autonomous loop: decide what's next, dispatch a turn, record the result.
 
-Lesson carried forward (EIGEN_GOALS.md): idle and working must never look
+Lesson carried forward (CONSAL_GOALS.md): idle and working must never look
 identical from outside. Because turns run through `container.run_turn` (a
 synchronous subprocess with a real exit code), the loop always has an
 explicit success/failure to act on rather than needing to poll and guess
@@ -19,8 +19,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from eigen import container, github, prompts, state
-from eigen.container import TurnResult
+from consal import container, github, prompts, state
+from consal.container import TurnResult
 
 
 @dataclass(frozen=True)
@@ -52,7 +52,7 @@ def next_turn(repo: str, active_issue_number: int | None) -> dict | None:
     scheduler, is always reflected correctly on the very next tick).
 
     New issues are picked oldest-first (by `createdAt`) — the simplest
-    deterministic v1 policy. V1 scope (EIGEN_GOALS.md) has no
+    deterministic v1 policy. V1 scope (CONSAL_GOALS.md) has no
     issue-level gating or prioritization to layer on top of this yet.
     """
     open_issues = github.list_open_issues(repo)
@@ -100,7 +100,7 @@ def run_loop_once(
         github.comment_on_issue(
             repo,
             issue["number"],
-            f"Eigen's autonomous turn on this issue failed (exit "
+            f"Consal's autonomous turn on this issue failed (exit "
             f"{turn.exit_code}).\n\n```\n{turn.stderr}\n```",
         )
 

@@ -1,4 +1,4 @@
-from eigen.prompts import prompt_for_issue
+from consal.prompts import prompt_for_issue
 
 
 def test_includes_repo_and_issue_number() -> None:

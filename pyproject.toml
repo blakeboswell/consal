@@ -1,5 +1,5 @@
 [project]
-name = "eigen"
+name = "consal"
 version = "0.1.0"
 description = "Self-driving development system: decomposes a plan into GitHub issues and works them autonomously inside a dco-managed container."
 authors = [
@@ -9,7 +9,7 @@ requires-python = ">=3.11"
 dependencies = []
 
 [project.scripts]
-eigen = "eigen.cli:main"
+consal = "consal.cli:main"
 
 [build-system]
 requires = ["uv_build>=0.11.28,<0.12.0"]

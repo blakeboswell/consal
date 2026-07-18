@@ -12,7 +12,7 @@ wheels = [
 ]
 
 [[package]]
-name = "eigen"
+name = "consal"
 version = "0.1.0"
 source = { editable = "." }
 

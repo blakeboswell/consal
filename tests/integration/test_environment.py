@@ -1,4 +1,4 @@
-"""Integration tests: hit real `gh`/`dco`/`devcontainer`, per EIGEN_GOALS.md's
+"""Integration tests: hit real `gh`/`dco`/`devcontainer`, per CONSAL_GOALS.md's
 testing strategy. Excluded from the default run (see `addopts` in
 pyproject.toml).
 
@@ -51,8 +51,8 @@ def test_gh_is_authenticated() -> None:
 
 def test_dco_supports_up_only() -> None:
     """`container.ensure_container_up` needs `dco --sub-config <name>
-    --up-only`, a flag added to `dco` specifically for Eigen's headless
-    bring-up (see the correction in EIGEN_GOALS.md's "Eigen/dco interface"
+    --up-only`, a flag added to `dco` specifically for Consal's headless
+    bring-up (see the correction in CONSAL_GOALS.md's "Consal/dco interface"
     decision — plain `dco` always attaches interactively and has no
     headless mode of its own). Fails until that flag has landed on the
     `dco` build installed on this host.
@@ -63,14 +63,14 @@ def test_dco_supports_up_only() -> None:
     help_text = result.stdout + result.stderr
     assert "--up-only" in help_text, (
         "dco --help doesn't mention --up-only yet — this host's dco build "
-        "predates the flag Eigen's headless bring-up depends on"
+        "predates the flag Consal's headless bring-up depends on"
     )
 
 
 def test_claude_code_oauth_token_is_set() -> None:
-    """Every Eigen-generated devcontainer.json injects
+    """Every Consal-generated devcontainer.json injects
     `"CLAUDE_CODE_OAUTH_TOKEN": "${localEnv:CLAUDE_CODE_OAUTH_TOKEN}"` (see
-    the correction in EIGEN_GOALS.md's "Eigen/dco interface" decision) so
+    the correction in CONSAL_GOALS.md's "Consal/dco interface" decision) so
     `claude -p` can authenticate headlessly instead of failing with
     "Not logged in" — found missing via a real run_turn integration test
     failure, not designed upfront.
@@ -85,7 +85,7 @@ def test_claude_code_oauth_token_is_set() -> None:
     """
     assert os.environ.get("CLAUDE_CODE_OAUTH_TOKEN"), (
         "CLAUDE_CODE_OAUTH_TOKEN is not set on this host — every "
-        "Eigen-managed container's containerEnv references it via "
+        "Consal-managed container's containerEnv references it via "
         "${localEnv:CLAUDE_CODE_OAUTH_TOKEN}, so claude -p will fail with "
         "'Not logged in' inside any container built without it. Generate "
         "one with `claude setup-token` (valid for a year)."

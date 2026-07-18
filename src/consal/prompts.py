@@ -13,7 +13,7 @@ def prompt_for_issue(repo: str, issue_number: int, issue_title: str, issue_body:
 
     Doesn't repeat the guardrail hook's rules — force-push, direct push to
     main/master, `gh pr merge`, etc. are already enforced at the tool-call
-    level regardless of what this prompt says (EIGEN_GOALS.md's isolation
+    level regardless of what this prompt says (CONSAL_GOALS.md's isolation
     goals: the hook is a backstop, not something to rely on the prompt to
     avoid triggering). It just points Claude at the intended workflow so
     it doesn't waste a turn hitting a guardrail it could have avoided:

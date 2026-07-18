@@ -1,8 +1,8 @@
-# eigen-test sub-config
+# consal-test sub-config
 
 Fixture for `tests/integration/test_container.py` — exercises
 `ensure_container_up`/`run_turn` against a real `dco`/`devcontainer`
-container. Not the production "eigen" sub-config `config.generate_subconfig`
+container. Not the production "consal" sub-config `config.generate_subconfig`
 produces (this one has no PAT injection, and its own copy of
 `guardrail-hook.sh` isn't wired up via `.claude/settings.json` — it's here
 only to satisfy `validate_subconfig`'s check, not because this fixture

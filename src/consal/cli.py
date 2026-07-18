@@ -1,4 +1,4 @@
-"""Command-line entry point: `eigen <subcommand>`."""
+"""Command-line entry point: `consal <subcommand>`."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from collections.abc import Sequence
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="eigen")
+    parser = argparse.ArgumentParser(prog="consal")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     subparsers.add_parser(
@@ -19,10 +19,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     if args.command == "doctor":
-        print("eigen doctor: not yet implemented")
+        print("consal doctor: not yet implemented")
         return 0
     if args.command == "run":
-        print("eigen run: not yet implemented")
+        print("consal run: not yet implemented")
         return 0
 
     return 1

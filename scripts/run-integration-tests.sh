@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Run Eigen's integration test tier (real gh/dco/devcontainer) and write
+# Run Consal's integration test tier (real gh/dco/devcontainer) and write
 # the result to a file inside the repo. Run this on the host — this
 # repo's own dev sandbox has no Docker access, so `dco`/`devcontainer`
 # aren't reachable from in there. Since the sandbox bind-mounts this same
@@ -7,11 +7,11 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-# CLAUDE_CODE_OAUTH_TOKEN is host-wide and personal, not eigen-specific,
+# CLAUDE_CODE_OAUTH_TOKEN is host-wide and personal, not consal-specific,
 # so it deliberately isn't auto-loaded into every shell (unlike
-# EIGEN_GH_PAT, which lives in this repo's own gitignored .envrc via
+# CONSAL_GH_PAT, which lives in this repo's own gitignored .envrc via
 # direnv) -- pulled in here, scoped to just running tests.
-SECRETS_FILE="${EIGEN_SECRETS_FILE:-$HOME/.config/claude-code/secrets.env}"
+SECRETS_FILE="${CONSAL_SECRETS_FILE:-$HOME/.config/claude-code/secrets.env}"
 if [[ -f "$SECRETS_FILE" ]]; then
   # shellcheck disable=SC1090
   source "$SECRETS_FILE"
@@ -42,7 +42,7 @@ import os
 import sys
 
 secrets = []
-for var in ("CLAUDE_CODE_OAUTH_TOKEN", "EIGEN_GH_PAT"):
+for var in ("CLAUDE_CODE_OAUTH_TOKEN", "CONSAL_GH_PAT"):
     value = os.environ.get(var)
     if value:
         secrets.append((var, value))
@@ -63,7 +63,7 @@ for line in sys.stdin:
 # real exit code and forward progress.
 set +e
 {
-  echo "=== eigen integration tests: $(date -u +%Y-%m-%dT%H:%M:%SZ) ==="
+  echo "=== consal integration tests: $(date -u +%Y-%m-%dT%H:%M:%SZ) ==="
   uv run pytest -m integration -v --tb=short
 } 2>&1 | python3 -c "$REDACT_PY" > "$out_file"
 status="${PIPESTATUS[0]}"

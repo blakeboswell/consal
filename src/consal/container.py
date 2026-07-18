@@ -2,10 +2,10 @@
 
 Interactive work (planning, direct intervention) goes through
 `dco --claude` directly and never touches this module — see
-EIGEN_GOALS.md, "Eigen/`dco` interface". This module is only for
+CONSAL_GOALS.md, "Consal/`dco` interface". This module is only for
 headless, autonomous turns: `dco --sub-config <name> --up-only` to ensure
 the container is up (a small additive flag on `dco` — see the correction
-in EIGEN_GOALS.md; plain `dco` always attaches interactively, it has no
+in CONSAL_GOALS.md; plain `dco` always attaches interactively, it has no
 headless bring-up mode of its own), then `devcontainer exec
 --workspace-folder ... --config ... -- claude -p "$PROMPT"` as a
 synchronous foreground subprocess, so its exit code is the turn's

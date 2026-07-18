@@ -1,6 +1,6 @@
-# Eigen sub-config network allowlist — mounted over the shared, empty
+# Consal sub-config network allowlist — mounted over the shared, empty
 # top-level .devcontainer/allowlist.txt (see init-firewall.sh) so that
-# only containers built from an Eigen sub-config get a locked-down
+# only containers built from a Consal sub-config get a locked-down
 # default-deny firewall, without touching the default profile.
 #
 # GitHub is always allowed regardless of this file's contents (see

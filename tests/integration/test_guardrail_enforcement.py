@@ -1,9 +1,9 @@
 """Proves the guardrail hook is present, executable, and produces correct
-block/allow decisions inside a real, Eigen-generated container -- not
+block/allow decisions inside a real, Consal-generated container -- not
 just that its logic is correct on this dev sandbox's plain bash
-(test_guardrail_hook.py covers that). Uses the `eigen_managed_project`
+(test_guardrail_hook.py covers that). Uses the `consal_managed_project`
 fixture (conftest.py), which calls the real `config.generate_subconfig`
-against a disposable project -- distinct from `.devcontainer/eigen-test/`,
+against a disposable project -- distinct from `.devcontainer/consal-test/`,
 whose hook copy is inert.
 
 Deliberately invokes the hook script directly (same JSON-on-stdin
@@ -27,7 +27,7 @@ import json
 
 import pytest
 
-from eigen.container import TurnResult, exec_in_container
+from consal.container import TurnResult, exec_in_container
 
 from .conftest import ManagedProject
 
@@ -50,10 +50,10 @@ def _run_hook_in_container(
 
 
 def test_guardrail_hook_present_and_blocks_force_push(
-    eigen_managed_project: ManagedProject,
+    consal_managed_project: ManagedProject,
 ) -> None:
     result = _run_hook_in_container(
-        eigen_managed_project, "Bash", "git push --force origin main"
+        consal_managed_project, "Bash", "git push --force origin main"
     )
     # 2 specifically, not just nonzero: the hook's own documented
     # contract is "blocks via exit code 2 (stderr becomes Claude's
@@ -66,9 +66,9 @@ def test_guardrail_hook_present_and_blocks_force_push(
 
 
 def test_guardrail_hook_present_and_allows_ordinary_commands(
-    eigen_managed_project: ManagedProject,
+    consal_managed_project: ManagedProject,
 ) -> None:
-    result = _run_hook_in_container(eigen_managed_project, "Bash", "git status")
+    result = _run_hook_in_container(consal_managed_project, "Bash", "git status")
     assert result.exit_code == 0, (
         f"expected the hook to allow this (exit 0), got exit {result.exit_code}\n"
         f"stdout: {result.stdout}\nstderr: {result.stderr}"

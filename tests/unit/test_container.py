@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from eigen.container import TurnResult, ensure_container_up, exec_in_container, run_turn
+from consal.container import TurnResult, ensure_container_up, exec_in_container, run_turn
 
 
 def test_turn_result_succeeded_true_on_zero_exit() -> None:
@@ -15,27 +15,27 @@ def test_turn_result_succeeded_false_on_nonzero_exit() -> None:
     assert TurnResult(exit_code=1, stdout="", stderr="boom").succeeded is False
 
 
-@patch("eigen.container.subprocess.run")
+@patch("consal.container.subprocess.run")
 def test_ensure_container_up_invokes_dco_sub_config(mock_run: MagicMock) -> None:
-    ensure_container_up(Path("/workspace"), "eigen")
+    ensure_container_up(Path("/workspace"), "consal")
     mock_run.assert_called_once_with(
-        ["dco", "/workspace", "--sub-config", "eigen", "--up-only"], check=True
+        ["dco", "/workspace", "--sub-config", "consal", "--up-only"], check=True
     )
 
 
-@patch("eigen.container.subprocess.run")
+@patch("consal.container.subprocess.run")
 def test_ensure_container_up_propagates_dco_failure(mock_run: MagicMock) -> None:
     mock_run.side_effect = subprocess.CalledProcessError(returncode=1, cmd=["dco"])
     with pytest.raises(subprocess.CalledProcessError):
-        ensure_container_up(Path("/workspace"), "eigen")
+        ensure_container_up(Path("/workspace"), "consal")
 
 
-@patch("eigen.container.subprocess.run")
+@patch("consal.container.subprocess.run")
 def test_run_turn_builds_expected_command(mock_run: MagicMock) -> None:
     mock_run.return_value = subprocess.CompletedProcess(
         args=[], returncode=0, stdout="ok", stderr=""
     )
-    run_turn(Path("/workspace"), "eigen", "implement issue #42")
+    run_turn(Path("/workspace"), "consal", "implement issue #42")
     mock_run.assert_called_once_with(
         [
             "devcontainer",
@@ -43,7 +43,7 @@ def test_run_turn_builds_expected_command(mock_run: MagicMock) -> None:
             "--workspace-folder",
             "/workspace",
             "--config",
-            "/workspace/.devcontainer/eigen/devcontainer.json",
+            "/workspace/.devcontainer/consal/devcontainer.json",
             "--",
             "claude",
             "-p",
@@ -55,13 +55,13 @@ def test_run_turn_builds_expected_command(mock_run: MagicMock) -> None:
     )
 
 
-@patch("eigen.container.subprocess.run")
+@patch("consal.container.subprocess.run")
 def test_exec_in_container_passes_input_through(mock_run: MagicMock) -> None:
     mock_run.return_value = subprocess.CompletedProcess(
         args=[], returncode=2, stdout="", stderr="blocked"
     )
     result = exec_in_container(
-        Path("/workspace"), "eigen", ["bash", "hook.sh"], input="payload"
+        Path("/workspace"), "consal", ["bash", "hook.sh"], input="payload"
     )
     mock_run.assert_called_once_with(
         [
@@ -70,7 +70,7 @@ def test_exec_in_container_passes_input_through(mock_run: MagicMock) -> None:
             "--workspace-folder",
             "/workspace",
             "--config",
-            "/workspace/.devcontainer/eigen/devcontainer.json",
+            "/workspace/.devcontainer/consal/devcontainer.json",
             "--",
             "bash",
             "hook.sh",
@@ -82,21 +82,21 @@ def test_exec_in_container_passes_input_through(mock_run: MagicMock) -> None:
     assert result == TurnResult(exit_code=2, stdout="", stderr="blocked")
 
 
-@patch("eigen.container.subprocess.run")
+@patch("consal.container.subprocess.run")
 def test_run_turn_returns_result_on_success(mock_run: MagicMock) -> None:
     mock_run.return_value = subprocess.CompletedProcess(
         args=[], returncode=0, stdout="done", stderr=""
     )
-    result = run_turn(Path("/workspace"), "eigen", "prompt")
+    result = run_turn(Path("/workspace"), "consal", "prompt")
     assert result == TurnResult(exit_code=0, stdout="done", stderr="")
     assert result.succeeded is True
 
 
-@patch("eigen.container.subprocess.run")
+@patch("consal.container.subprocess.run")
 def test_run_turn_returns_result_on_failure_without_raising(mock_run: MagicMock) -> None:
     mock_run.return_value = subprocess.CompletedProcess(
         args=[], returncode=1, stdout="", stderr="claude crashed"
     )
-    result = run_turn(Path("/workspace"), "eigen", "prompt")
+    result = run_turn(Path("/workspace"), "consal", "prompt")
     assert result == TurnResult(exit_code=1, stdout="", stderr="claude crashed")
     assert result.succeeded is False
