@@ -505,6 +505,37 @@ will live), not retrospective bash war stories:
   deleted from here too. The policy was sound; the ownership conclusion
   it implied wasn't.)
 
+- **CLI config (2026-07-18): CLI args are canonical, a checked-in
+  `.consal/config.toml` just pre-fills them.** Standard layered-config
+  pattern — precedence is explicit `--flag` > config file value >
+  built-in default, not two parallel ways to configure the tool.
+  `project_id`/`repo` get no built-in default (guessing wrong here could
+  point the scheduler at the wrong GitHub repo, or collide two projects'
+  `~/.consal/<project_id>/` state directories) — `resolve_settings`
+  raises a clear error naming exactly what's missing and where it could
+  come from, rather than silently picking something. `sub_config`
+  defaults to `"consal"`; `workspace` defaults to cwd, matching `dco`'s
+  own convention for its positional `[path]`. The config file is static,
+  checked-in project config — like the sub-config profile itself — not
+  runtime state, so it lives in the project's own repo, not
+  `~/.consal/<project_id>/`. Parsed via stdlib `tomllib` (Python 3.11+,
+  already required) — no new dependency.
+
+- **`consal doctor` (2026-07-18): three check categories, directly off
+  lessons #1/#2 and the testing-strategy decision that named this
+  command.** Distinct from the test suite, which checks code logic
+  against mocks and never the real machine it runs on:
+  - Environment prerequisites (`dco`/`devcontainer` on PATH, `gh`
+    authenticated, `CONSAL_GH_PAT`/`CLAUDE_CODE_OAUTH_TOKEN` set) — the
+    same category `tests/integration/test_environment.py` checks, but as
+    a real command a human runs against their own machine.
+  - Sub-config self-consistency (lesson #1) via the existing
+    `config.validate_subconfig`.
+  - Standing allowlist reachability (lesson #2): a real
+    `socket.getaddrinfo` per domain in the sub-config's `allowlist.txt`,
+    not a one-time assertion that the list is correct because it's
+    written down.
+
 ## Explicitly deferred (Consal specifics, not yet decided)
 
 - **Documentation structure in detail.** Direction agreed (docstrings for
