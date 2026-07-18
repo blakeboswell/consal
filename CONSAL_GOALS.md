@@ -546,12 +546,31 @@ will live), not retrospective bash war stories:
     not a one-time assertion that the list is correct because it's
     written down.
 
-## Explicitly deferred (Consal specifics, not yet decided)
+- **`consal init` (2026-07-18): the missing piece, found while writing
+  usage docs.** `config.generate_subconfig` had no CLI entry point —
+  before this, the only way to set up a new project was calling it
+  directly from a Python REPL/script, which meant the README's usage
+  section had no honest one-line answer to "how do I set up a new
+  project." `consal init` wraps it and optionally merges
+  `project_id`/`repo`/`sub_config` into `.consal/config.toml`, whichever
+  were given. Unlike `doctor`/`run`, nothing is required — generating the
+  sub-config itself needs neither `project_id` nor `repo`
+  (`generate_subconfig`'s own signature takes only a workspace and a
+  sub-config name). Re-running `init` merges into the existing config
+  file rather than clobbering it, so recording `project_id` later doesn't
+  lose a `repo` set earlier.
 
-- **Documentation structure in detail.** Direction agreed (docstrings for
-  API-level detail, a lean README for quickstart/usage only, a separate
-  design doc for the "why," incremental fixes documented in commit
-  messages rather than accreted into the README) — specifics TBD.
+- **Documentation structure (2026-07-18): decided, matching the direction
+  already agreed.** Docstrings carry API-level detail (already the
+  practice throughout `src/consal/` — every module has a substantive
+  top-of-file docstring). `README.md` is quickstart/usage only, split
+  into a "Status" section naming what's real vs. not yet built and a
+  "Usage" section walking prerequisites → `consal init` →
+  `.consal/config.toml` → `consal doctor` → `consal run`. `CONSAL_GOALS.md`
+  (this file) is the separate design doc for the "why." Incremental fixes
+  stay in commit messages, not accreted into the README — already the
+  practice all session; no new artifact (changelog, docs/ directory, doc
+  generator) needed for a single-user CLI tool.
 
 ## Non-goals
 
