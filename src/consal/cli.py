@@ -1,29 +1,89 @@
-"""Command-line entry point: `consal <subcommand>`."""
+"""Command-line entry point: `consal <subcommand>`.
+
+CLI args are the canonical interface (see settings.py's docstring); a
+project's `.consal/config.toml` just pre-fills the same values.
+"""
 
 from __future__ import annotations
 
 import argparse
 import sys
 from collections.abc import Sequence
+from pathlib import Path
+
+from consal import doctor as doctor_module
+from consal.scheduler import run_loop_once
+from consal.settings import SettingsError, resolve_settings
+
+
+def _add_common_args(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--workspace",
+        type=Path,
+        default=None,
+        help="project directory (default: current directory)",
+    )
+    parser.add_argument(
+        "--project-id",
+        default=None,
+        help="runtime state namespace (default: from .consal/config.toml)",
+    )
+    parser.add_argument(
+        "--repo",
+        default=None,
+        help="GitHub repo, owner/name (default: from .consal/config.toml)",
+    )
+    parser.add_argument(
+        "--sub-config",
+        default=None,
+        help="dco sub-config name (default: from .consal/config.toml, or \"consal\")",
+    )
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="consal")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    subparsers.add_parser(
+    doctor_parser = subparsers.add_parser(
         "doctor", help="run standing self-consistency/reachability checks"
     )
-    subparsers.add_parser("run", help="run one autonomous scheduler tick")
+    _add_common_args(doctor_parser)
+
+    run_parser = subparsers.add_parser("run", help="run one autonomous scheduler tick")
+    _add_common_args(run_parser)
 
     args = parser.parse_args(argv)
 
+    try:
+        settings = resolve_settings(
+            workspace=args.workspace,
+            project_id=args.project_id,
+            repo=args.repo,
+            sub_config=args.sub_config,
+        )
+    except SettingsError as exc:
+        print(f"consal: error: {exc}", file=sys.stderr)
+        return 1
+
     if args.command == "doctor":
-        print("consal doctor: not yet implemented")
-        return 0
+        return doctor_module.run(settings)
+
     if args.command == "run":
-        print("consal run: not yet implemented")
-        return 0
+        result = run_loop_once(
+            settings.project_id, settings.workspace, settings.repo, settings.sub_config
+        )
+        if result.was_idle:
+            print("consal run: idle, no open issues")
+            return 0
+        if result.turn.succeeded:
+            print(f"consal run: issue #{result.issue_number} -- turn succeeded")
+            return 0
+        print(
+            f"consal run: issue #{result.issue_number} -- turn failed "
+            f"(exit {result.turn.exit_code})",
+            file=sys.stderr,
+        )
+        return 1
 
     return 1
 
