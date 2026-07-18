@@ -457,8 +457,18 @@ will live), not retrospective bash war stories:
     sandbox repo, not subprocess mocks.
   - Idle vs. working ambiguity → mostly solved by construction now that
     headless turns are synchronous `devcontainer exec` (see the `dco`
-    interface decision above); remaining piece is a scheduler-dispatch
-    unit test (given pending work, does the loop actually issue the call).
+    interface decision above). **Update (2026-07-18):** covered by both a
+    scheduler-dispatch unit test (mocked, given pending work does the loop
+    actually issue the call) and a real integration test
+    (`tests/integration/test_scheduler.py`) exercising the full chain —
+    real container bring-up, real `list_open_issues`, real prompt
+    construction, real state persistence — against the live GitHub repo.
+    That test deliberately mocks only `container.run_turn` and
+    `github.comment_on_issue`: letting an unscoped `claude -p` turn
+    actually work a live issue would combine an uncontrollable
+    model-judgment confound (the same reason the guardrail-enforcement
+    test above stopped trusting live turns) with a real mutating GitHub
+    write on every run.
 
   Mechanically: `pytest -m integration` as an opt-in marker, run
   separately from the fast default suite — fast tier runs on every save,
