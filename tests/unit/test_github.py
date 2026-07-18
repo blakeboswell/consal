@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from consal.github import comment_on_issue, create_issue, list_open_issues
+from consal.github import close_issue, comment_on_issue, create_issue, list_open_issues
 
 
 @patch("consal.github.subprocess.run")
@@ -92,3 +92,30 @@ def test_comment_on_issue_propagates_gh_failure(mock_run: MagicMock) -> None:
     mock_run.side_effect = subprocess.CalledProcessError(returncode=1, cmd=["gh"])
     with pytest.raises(subprocess.CalledProcessError):
         comment_on_issue("owner/repo", 42, "a comment")
+
+
+@patch("consal.github.subprocess.run")
+def test_close_issue_builds_expected_command_with_default_reason(mock_run: MagicMock) -> None:
+    mock_run.return_value = subprocess.CompletedProcess(args=[], returncode=0)
+    close_issue("owner/repo", 42)
+    mock_run.assert_called_once_with(
+        ["gh", "issue", "close", "42", "--repo", "owner/repo", "--reason", "not planned"],
+        check=True,
+    )
+
+
+@patch("consal.github.subprocess.run")
+def test_close_issue_accepts_explicit_reason(mock_run: MagicMock) -> None:
+    mock_run.return_value = subprocess.CompletedProcess(args=[], returncode=0)
+    close_issue("owner/repo", 42, reason="completed")
+    mock_run.assert_called_once_with(
+        ["gh", "issue", "close", "42", "--repo", "owner/repo", "--reason", "completed"],
+        check=True,
+    )
+
+
+@patch("consal.github.subprocess.run")
+def test_close_issue_propagates_gh_failure(mock_run: MagicMock) -> None:
+    mock_run.side_effect = subprocess.CalledProcessError(returncode=1, cmd=["gh"])
+    with pytest.raises(subprocess.CalledProcessError):
+        close_issue("owner/repo", 42)

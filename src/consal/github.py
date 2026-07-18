@@ -66,3 +66,14 @@ def comment_on_issue(repo: str, issue_number: int, body: str) -> None:
         ["gh", "issue", "comment", str(issue_number), "--repo", repo, "--body", body],
         check=True,
     )
+
+
+def close_issue(repo: str, issue_number: int, reason: str = "not planned") -> None:
+    """Close an issue. ``reason`` is `gh`'s own vocabulary: "completed" or
+    "not planned" (its documented default meaning for the latter --
+    cleanup of a disposable test issue, not real completed work).
+    """
+    subprocess.run(
+        ["gh", "issue", "close", str(issue_number), "--repo", repo, "--reason", reason],
+        check=True,
+    )
