@@ -1,5 +1,5 @@
-"""Integration test: the real `scheduler.run_loop_once` chain -- real
-container bring-up, real `gh` reads, real state persistence -- against a
+"""Integration test: the real `scheduler.run_loop_once` chain. Real
+container bring-up, real `gh` reads, real state persistence, against a
 live GitHub repo. Excluded from the default run (see `addopts` in
 pyproject.toml).
 
@@ -41,7 +41,7 @@ PROJECT_ID = "consal-scheduler-integration-test"
 
 @pytest.fixture
 def real_test_issue():
-    """A real, disposable issue on the live project repo -- created before
+    """A real, disposable issue on the live project repo, created before
     the test, closed after, regardless of outcome.
     """
     issue = github.create_issue(
@@ -63,7 +63,7 @@ def real_test_issue():
 @pytest.fixture
 def clean_scheduler_state():
     """Guarantees `~/.consal/<PROJECT_ID>/` doesn't linger on the host
-    after this test, regardless of outcome -- this integration tier's
+    after this test, regardless of outcome. This integration tier's
     other fixture (`consal_managed_project`) tears down containers/volumes
     for the same reason; runtime state deserves the same treatment.
     """

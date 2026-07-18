@@ -1,15 +1,15 @@
 """Resolve Consal's per-project settings from CLI args, a checked-in
 project config file, and built-in defaults, in that precedence order.
 
-CLI args are the canonical interface — the config file exists purely to
+CLI args are the canonical interface. The config file exists purely to
 pre-fill the same values, not as a parallel code path. `project_id`/`repo`
 get no built-in default: guessing wrong here could point the scheduler at
 the wrong GitHub repo or collide two projects' runtime state directories,
 so both must come from an explicit `--flag` or the config file, or this
 raises rather than silently picking something.
 
-The config file (`.consal/config.toml`) is static, project-level config —
-like the sub-config profile itself, it belongs checked into the project's
+The config file (`.consal/config.toml`) is static, project-level config.
+Like the sub-config profile itself, it belongs checked into the project's
 own repo, not in the churny, host-side `~/.consal/<project_id>/` runtime
 state directory (see CONSAL_GOALS.md's profile-vs-runtime-state split).
 """
@@ -57,7 +57,7 @@ def resolve_settings(
 
     `workspace` defaults to cwd (matching `dco`'s own convention for its
     positional `[path]`). `sub_config` defaults to `"consal"`.
-    `project_id`/`repo` have no default — raises `SettingsError` if
+    `project_id`/`repo` have no default: raises `SettingsError` if
     neither an arg nor the config file supplies them.
     """
     resolved_workspace = (workspace or Path.cwd()).resolve()
@@ -78,7 +78,7 @@ def resolve_settings(
     if missing:
         config_path = resolved_workspace / CONFIG_RELATIVE_PATH
         raise SettingsError(
-            f"missing required setting(s): {', '.join(missing)} -- pass via "
+            f"missing required setting(s): {', '.join(missing)}. Pass via "
             f"--{' / --'.join(missing)}, or set in {config_path}"
         )
 
@@ -99,7 +99,7 @@ def _toml_string(value: str) -> str:
 def write_config_file(workspace: Path, **updates: str) -> Path:
     """Merge ``updates`` into `<workspace>/.consal/config.toml`, creating
     it (and its parent directory) if it doesn't exist yet, preserving any
-    existing keys not being updated. Values must be plain strings — the
+    existing keys not being updated. Values must be plain strings: the
     only type this config file's fields ever need.
 
     Hand-serializes rather than depending on a TOML-writing library:

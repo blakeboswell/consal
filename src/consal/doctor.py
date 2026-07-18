@@ -1,10 +1,10 @@
 """`consal doctor`: standing self-consistency/reachability checks against
-the real environment — distinct from the test suite, which checks the
+the real environment. Distinct from the test suite, which checks the
 code's logic against mocks and fixtures, never the actual machine it runs
 on. This is what CONSAL_GOALS.md's lessons #1 (config self-consistency)
 and #2 (standing reachability, not a one-time assertion) become as a real,
 repeatable product feature, per the testing-strategy decision: "the live
-check itself ships as a product feature... not a CI assertion — network
+check itself ships as a product feature... not a CI assertion; network
 state isn't CI's job to assert."
 """
 
@@ -21,13 +21,13 @@ from consal.settings import Settings
 
 def _report(label: str, ok: bool, detail: str = "") -> bool:
     status = "OK" if ok else "FAIL"
-    suffix = f" -- {detail}" if detail and not ok else ""
+    suffix = f": {detail}" if detail and not ok else ""
     print(f"[{status}] {label}{suffix}")
     return ok
 
 
 def check_environment() -> bool:
-    """Prerequisite binaries/credentials on this host -- the same category
+    """Prerequisite binaries/credentials on this host: the same category
     of thing tests/integration/test_environment.py checks, but as a real
     command a human runs against their own machine, with readable output,
     not pytest assertions only exercised on the host running the suite.
@@ -44,14 +44,14 @@ def check_environment() -> bool:
         _report(
             "CONSAL_GH_PAT set",
             bool(os.environ.get("CONSAL_GH_PAT")),
-            "not set -- containerEnv's ${localEnv:CONSAL_GH_PAT} will resolve empty",
+            "not set: containerEnv's ${localEnv:CONSAL_GH_PAT} will resolve empty",
         )
     )
     checks.append(
         _report(
             "CLAUDE_CODE_OAUTH_TOKEN set",
             bool(os.environ.get("CLAUDE_CODE_OAUTH_TOKEN")),
-            "not set -- claude -p will fail with 'Not logged in' inside the container",
+            "not set: claude -p will fail with 'Not logged in' inside the container",
         )
     )
     return all(checks)
@@ -59,7 +59,7 @@ def check_environment() -> bool:
 
 def check_subconfig(settings: Settings) -> bool:
     """Lesson #1: a config's *result* checked for self-consistency, not
-    taken on faith -- every referenced path actually exists.
+    taken on faith. Every referenced path actually exists.
     """
     subconfig_dir = settings.workspace / ".devcontainer" / settings.sub_config
     problems = config.validate_subconfig(subconfig_dir)

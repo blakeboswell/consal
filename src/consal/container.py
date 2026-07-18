@@ -1,10 +1,10 @@
 """Wrappers around `dco` and `devcontainer exec` for autonomous turns.
 
 Interactive work (planning, direct intervention) goes through
-`dco --claude` directly and never touches this module — see
+`dco --claude` directly and never touches this module. See
 CONSAL_GOALS.md, "Consal/`dco` interface". This module is only for
 headless, autonomous turns: `dco --sub-config <name> --up-only` to ensure
-the container is up (a small additive flag on `dco` — see the correction
+the container is up (a small additive flag on `dco`, see the correction
 in CONSAL_GOALS.md; plain `dco` always attaches interactively, it has no
 headless bring-up mode of its own), then `devcontainer exec
 --workspace-folder ... --config ... -- claude -p "$PROMPT"` as a
@@ -39,7 +39,7 @@ def ensure_container_up(workspace_folder: Path, subconfig_name: str) -> None:
     relying on the calling process's cwd matching dco's positional `[path]`
     argument implicitly.
 
-    Raises `subprocess.CalledProcessError` if `dco` fails — bringing the
+    Raises `subprocess.CalledProcessError` if `dco` fails. Bringing the
     container up is a precondition for everything that follows, so failure
     here must stop the caller rather than be silently absorbed.
     """
@@ -65,7 +65,7 @@ def exec_in_container(
     `devcontainer exec --workspace-folder ... --config ...`.
 
     `run_turn` is the specific case of this for `claude -p <prompt>`; this
-    lower-level entry point exists so other code (and tests — e.g.
+    lower-level entry point exists so other code (and tests, e.g.
     invoking the guardrail hook script directly with a synthetic
     tool-call payload on stdin, to test hook enforcement independent of
     whether a model actually attempts a given tool call) doesn't have to
@@ -104,16 +104,16 @@ def run_turn(workspace_folder: Path, subconfig_name: str, prompt: str) -> TurnRe
     `--config` must point at the exact devcontainer.json the running
     container was brought up with. `dco` always passes both
     `--workspace-folder` and `--config` to every `devcontainer exec` call
-    (see `dco.in`) — omitting `--config` makes the CLI default to
+    (see `dco.in`). Omitting `--config` makes the CLI default to
     `.devcontainer/devcontainer.json` (the default profile) when matching
     which running container to attach to, which doesn't match a container
     brought up via a named `--sub-config` and fails with "Dev container
-    not found". Found via a real integration test failure, not assumed —
+    not found". Found via a real integration test failure, not assumed:
     an earlier version of this function omitted --config and happened to
     pass against a long-lived project with an already-running default
     container to fall back onto by accident.
 
-    Deliberately does not raise on a nonzero exit — the whole point of
+    Deliberately does not raise on a nonzero exit. The whole point of
     going through `devcontainer exec` is that its exit code becomes the
     turn's explicit success/failure signal for the caller (the scheduler)
     to act on, not an exception to catch.

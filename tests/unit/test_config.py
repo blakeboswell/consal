@@ -59,7 +59,7 @@ def test_validate_subconfig_invalid_json(tmp_path: Path) -> None:
 
 def test_validate_subconfig_consal_test_fixture() -> None:
     """The real `.devcontainer/consal-test/` fixture used by
-    tests/integration/test_container.py — checked for real, not just
+    tests/integration/test_container.py, checked for real, not just
     synthetic tmp_path fixtures, so a broken reference in it is caught
     here rather than only surfacing during a live `dco` run on the host.
     """
@@ -70,7 +70,7 @@ def test_validate_subconfig_consal_test_fixture() -> None:
 
 def test_generate_subconfig_writes_valid_subconfig(tmp_path: Path) -> None:
     # devcontainer.json shares ../Dockerfile with the project's default
-    # profile, which generate_subconfig doesn't itself create -- that's
+    # profile, which generate_subconfig doesn't itself create. That's
     # dco's own self-heal job on first --sub-config use (or it's already
     # there in a real project). Simulate that state here.
     (tmp_path / ".devcontainer").mkdir()
@@ -114,7 +114,7 @@ def test_generate_subconfig_mounts_allowlist_with_real_subconfig_name(
 ) -> None:
     """The template ships a __SUBCONFIG_NAME__ placeholder in the
     allowlist bind-mount source (the mount needs to know its own
-    directory name, which varies per call) -- this must be substituted
+    directory name, which varies per call). This must be substituted
     with the real name, never left in the generated file, and must match
     whatever subconfig_name was actually passed in (not hardcoded to
     "consal" specifically).
@@ -128,7 +128,7 @@ def test_generate_subconfig_mounts_allowlist_with_real_subconfig_name(
 
 
 def test_generate_subconfig_references_pat_via_host_env_var(tmp_path: Path) -> None:
-    """The PAT itself is never generated or written here — only a
+    """The PAT itself is never generated or written here, only a
     reference to a host env var Consal expects to already be set (see
     CONSAL_GOALS.md: injected via containerEnv, never committed).
     """

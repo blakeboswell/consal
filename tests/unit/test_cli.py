@@ -98,7 +98,7 @@ def test_run_passes_resolved_settings_through(mock_run_loop_once: MagicMock, tmp
 
 
 # init runs the real config.generate_subconfig/write_config_file (no
-# mocking) -- both are fast, pure filesystem operations against tmp_path,
+# mocking). Both are fast, pure filesystem operations against tmp_path,
 # no subprocess/network involved, so there's no cost to exercising the
 # real wiring instead of asserting on mocked call shapes.
 
@@ -145,7 +145,7 @@ def test_init_respects_custom_sub_config_name(tmp_path: Path) -> None:
 
 def test_init_does_not_require_project_id_or_repo(tmp_path: Path) -> None:
     # unlike doctor/run, init must not go through resolve_settings's
-    # required-field check -- generating a sub-config needs neither.
+    # required-field check, since generating a sub-config needs neither.
     exit_code = main(["init", "--workspace", str(tmp_path)])
     assert exit_code == 0
 

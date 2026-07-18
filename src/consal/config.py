@@ -1,20 +1,20 @@
 """Generate and self-consistency-check Consal's `dco` sub-config profiles.
 
 Lesson carried forward (CONSAL_GOALS.md): a config's *result* must be
-checked for self-consistency — every referenced path actually exists —
+checked for self-consistency (every referenced path actually exists)
 before it's ever handed to `dco`, without needing a real container build
 to surface a gap.
 
 The guardrail hook shipped here (`templates/guardrail-hook.sh`) is
-autonomy-specific policy, so it's authored and owned in Consal, not `dco`
-— see CONSAL_GOALS.md's architecture rationale and the correction under
+autonomy-specific policy, so it's authored and owned in Consal, not `dco`.
+See CONSAL_GOALS.md's architecture rationale and the correction under
 "Consal/`dco` interface" (there's no Python-side reimplementation of this
 policy: a Claude Code `PreToolUse` hook has to be a shell command, so a
 parallel Python checker would never run in the real enforcement path).
 
 `templates/allowlist.txt` is bind-mounted over the shared, empty
 top-level `.devcontainer/allowlist.txt` at container-start (see
-`devcontainer.json`'s `mounts` entry) — see CONSAL_GOALS.md's "Isolation &
+`devcontainer.json`'s `mounts` entry). See CONSAL_GOALS.md's "Isolation &
 safety goals" correction: this locks down egress specifically for
 containers carrying `CLAUDE_CODE_OAUTH_TOKEN`, without touching the
 default profile's own (currently open) firewall posture.
@@ -68,7 +68,7 @@ def generate_subconfig(project_root: Path, subconfig_name: str) -> Path:
     root registering the guardrail hook as a `PreToolUse` hook.
 
     Copies the packaged templates (devcontainer.json shares `../Dockerfile`
-    with the project's default profile — see CONSAL_GOALS.md's "Consal/`dco`
+    with the project's default profile, see CONSAL_GOALS.md's "Consal/`dco`
     interface" decision; the PAT itself is never written here, only
     referenced via `containerEnv`'s `${localEnv:CONSAL_GH_PAT}`, so it's the
     caller's job to set that env var on the host, never to commit it).

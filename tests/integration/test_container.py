@@ -5,22 +5,22 @@ inside this repo's own dev sandbox (see the consal-sandbox-no-docker memory
 note).
 
 Depends on `dco --up-only` (see CONSAL_GOALS.md's "Consal/dco interface"
-correction) — will fail until that flag has landed on the host's `dco`
+correction). Will fail until that flag has landed on the host's `dco`
 build. test_environment.py::test_dco_supports_up_only checks for that
 directly; this module fails the same way but for real, by actually trying
 to use it.
 
 Uses the `.devcontainer/consal-test/` fixture sub-config, not the (not yet
 built) production "consal" sub-config `config.generate_subconfig` will
-produce — see that fixture's own README.md.
+produce. See that fixture's own README.md.
 
 Note: an earlier version of `run_turn` omitted `--config` from its
-`devcontainer exec` call and these two tests passed anyway — almost
+`devcontainer exec` call and these two tests passed anyway, almost
 certainly by accident, reaching an already-running default-profile
 container on the real, persistent repo this ran against rather than the
 `consal-test` sub-config container `ensure_container_up` actually brought
 up. Caught once a disposable-project fixture with no such fallback
-container existed (see conftest.py's `consal_managed_project`) — see the
+container existed (see conftest.py's `consal_managed_project`). See the
 correction in `container.py`'s `run_turn` docstring.
 """
 
@@ -53,7 +53,7 @@ def test_run_turn_reports_failure_without_raising() -> None:
     """An empty prompt makes `claude -p` itself exit nonzero (verified
     directly in this sandbox: `claude -p ""` -> exit 1, "Input must be
     provided ..."). That failure should come back as a failed TurnResult,
-    not raise — the whole point of routing turns through `devcontainer
+    not raise. The whole point of routing turns through `devcontainer
     exec` rather than `dco --claude` is an explicit success/failure signal
     for the scheduler, never an exception to catch (lesson #4 in
     CONSAL_GOALS.md).

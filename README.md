@@ -12,20 +12,20 @@ and the decisions this repo's structure follows.
 
 The core loop works end to end: given a project with open GitHub issues,
 `consal run` picks one, dispatches a real `claude -p` turn inside a
-sandboxed, network-locked-down container, and records the result —
+sandboxed, network-locked-down container, and records the result,
 verified against a live GitHub repo and a live container, not just mocks.
 
 Not yet built:
 - **Plan decomposition.** Turning a high-level plan into GitHub issues
-  isn't automated — issues have to already exist. The interactive
+  isn't automated; issues have to already exist. The interactive
   planning session itself (step 2 of the workflow in `CONSAL_GOALS.md`)
   is just `dco --claude` directly; no Consal code is involved in that
   step at all.
 - **A scheduling/polling loop.** `consal run` performs exactly one tick.
   Running it repeatedly (cron, a shell loop, `watch`) is up to you for
-  now — deliberately out of scope for this module, see `scheduler.py`.
+  now, deliberately out of scope for this module, see `scheduler.py`.
 - **Configurable oversight granularity.** A stated future goal, not V1
-  scope — see `CONSAL_GOALS.md`'s "Configurability as a goal."
+  scope. See `CONSAL_GOALS.md`'s "Configurability as a goal."
 
 ## Usage
 
@@ -36,14 +36,14 @@ Prerequisites, once per host:
 - [`@devcontainers/cli`](https://github.com/devcontainers/cli) installed
   (`devcontainer` on `PATH`)
 - `gh` installed and authenticated (`gh auth status`)
-- `CONSAL_GH_PAT` set — a PAT scoped to exactly the target repo, never
+- `CONSAL_GH_PAT` set: a PAT scoped to exactly the target repo, never
   your full personal access (see `CONSAL_GOALS.md`'s isolation goals)
-- `CLAUDE_CODE_OAUTH_TOKEN` set — a long-lived token from
+- `CLAUDE_CODE_OAUTH_TOKEN` set: a long-lived token from
   `claude setup-token`, so headless turns can authenticate
 
 Run `consal doctor` (see below) to check all of this at once.
 
-Per project — a git repo with at least one commit (`dco`'s git-identity
+Per project, a git repo with at least one commit (`dco`'s git-identity
 sync and the guardrail hook's branch-detection logic both expect a real
 repo):
 
@@ -62,7 +62,7 @@ repo = "owner/name"
 ```
 
 `project_id` (namespaces runtime state under `~/.consal/<project_id>/`)
-isn't set automatically — add it yourself, or pass `--project-id` on
+isn't set automatically. Add it yourself, or pass `--project-id` on
 every `doctor`/`run` call. CLI flags always take precedence over this
 file; `consal init` merges new values into it rather than overwriting,
 so re-running `init` to add one setting doesn't lose another.
@@ -84,12 +84,12 @@ uv run consal doctor   # self-consistency / reachability checks
 ```
 
 The integration tier (`pytest -m integration`) hits real `gh`/`dco`/
-`devcontainer` and can't run inside this repo's own dev sandbox — no
+`devcontainer` and can't run inside this repo's own dev sandbox: no
 Docker there. Run it on the host instead:
 
 ```sh
 ./scripts/run-integration-tests.sh
 ```
 
-Writes to `.integration-results/latest.txt` (gitignored) — readable from
+Writes to `.integration-results/latest.txt` (gitignored), readable from
 inside the sandbox too, since it bind-mounts this same repo directory.

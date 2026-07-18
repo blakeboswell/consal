@@ -40,7 +40,7 @@ def test_next_turn_sticks_with_active_issue_if_still_open(mock_list: MagicMock) 
 
 @patch("consal.scheduler.github.list_open_issues")
 def test_next_turn_picks_new_issue_once_active_one_closed(mock_list: MagicMock) -> None:
-    # active issue 99 no longer appears in the open list -- it closed
+    # active issue 99 no longer appears in the open list: it closed
     mock_list.return_value = [_issue(5, "2024-01-01T00:00:00Z")]
     result = next_turn("owner/repo", active_issue_number=99)
     assert result["number"] == 5

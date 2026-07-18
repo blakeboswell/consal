@@ -1,4 +1,4 @@
-"""Tests the real guardrail hook script as a subprocess — not a Python
+"""Tests the real guardrail hook script as a subprocess, not a Python
 reimplementation of its rules. A Claude Code PreToolUse hook has to be a
 shell command; a parallel Python policy checker would never run in the
 actual enforcement path, so there's nothing to unit test except the real
@@ -80,7 +80,7 @@ def test_blocks_explicit_push_to_master() -> None:
 
 def _init_repo_with_commit(repo: Path, branch: str) -> None:
     # git rev-parse --abbrev-ref HEAD fails (falls back to the literal
-    # string "HEAD") on an unborn branch with zero commits -- verified
+    # string "HEAD") on an unborn branch with zero commits, verified
     # directly rather than assumed. A real Consal-managed project always
     # has at least one commit before autonomous work starts, so this
     # fixture matches realistic state rather than an edge case the hook

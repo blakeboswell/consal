@@ -2,13 +2,13 @@
 
 Lives outside git, in a host-side `~/.consal/<project_id>/` directory,
 deliberately separate from the static sub-config profile checked into the
-project's own repo — see CONSAL_GOALS.md, "Consal/`dco` interface" >
+project's own repo. See CONSAL_GOALS.md, "Consal/`dco` interface" >
 profile-vs-runtime-state split.
 
 `read_active_issue`/`write_active_issue` take the state directory itself
 (a `Path`), not a bare `project_id`, so neither hides an implicit
 `Path.home()` dependency the way an earlier version of `container.py`'s
-`ensure_container_up` implicitly relied on the calling process's cwd —
+`ensure_container_up` implicitly relied on the calling process's cwd,
 found to be a real bug there. Callers who only have a `project_id` do
 `read_active_issue(state_dir(project_id))`.
 """
@@ -29,12 +29,12 @@ def _active_issue_file(state_dir: Path) -> Path:
 def read_active_issue(state_dir: Path) -> int | None:
     """Return the currently active issue number, or None if none is set.
 
-    Absence of the state file is the sole "no active issue" representation
-    — read and write are kept symmetric on purpose, so there's exactly one
+    Absence of the state file is the sole "no active issue" representation.
+    Read and write are kept symmetric on purpose, so there's exactly one
     way to represent "nothing active," not two (e.g. missing file vs.
     empty file) that could silently drift apart. A file that exists but
     doesn't parse as an int raises rather than being treated as "no active
-    issue" — a corrupted state file must be a loud failure, not silently
+    issue": a corrupted state file must be a loud failure, not silently
     mistaken for a clean slate (lesson carried forward: explicit
     success/failure, never an accidental side effect).
     """

@@ -1,9 +1,9 @@
 """Proves the guardrail hook is present, executable, and produces correct
-block/allow decisions inside a real, Consal-generated container -- not
+block/allow decisions inside a real, Consal-generated container, not
 just that its logic is correct on this dev sandbox's plain bash
 (test_guardrail_hook.py covers that). Uses the `consal_managed_project`
 fixture (conftest.py), which calls the real `config.generate_subconfig`
-against a disposable project -- distinct from `.devcontainer/consal-test/`,
+against a disposable project. Distinct from `.devcontainer/consal-test/`,
 whose hook copy is inert.
 
 Deliberately invokes the hook script directly (same JSON-on-stdin
@@ -11,12 +11,12 @@ technique as test_guardrail_hook.py's unit tests), not through a full
 `claude -p` conversational turn. An earlier version tried asking Claude
 to actually attempt a force-push in natural language, and Claude's own
 safety judgment declined the command before ever attempting the Bash
-tool call -- the PreToolUse hook never got a chance to fire at all, so
+tool call. The PreToolUse hook never got a chance to fire at all, so
 that approach couldn't actually prove the hook works, only that the
 model has good judgment (which is not what this test is for). Invoking
 the real hook file at its real in-container path via
 `container.exec_in_container` proves what actually matters here: the
-file is present, executable, and produces the correct decision --
+file is present, executable, and produces the correct decision,
 decoupled from whether a model can be talked into a risky action on any
 given run.
 """

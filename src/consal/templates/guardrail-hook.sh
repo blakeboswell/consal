@@ -2,13 +2,13 @@
 # PreToolUse hook (Bash matcher) for Consal-managed autonomous sessions.
 #
 # Hard-blocks the handful of git/gh operations that are never legitimate
-# under Consal's PR-only autonomous workflow (see CONSAL_GOALS.md,
-# "Isolation & safety goals" -- a human is the only one who can merge
-# code or touch branch/repo protection). This fires even under
+# under Consal's PR-only autonomous workflow (see CONSAL_GOALS.md's
+# "Isolation & safety goals": a human is the only one who can merge code
+# or touch branch/repo protection). This fires even under
 # --dangerously-skip-permissions: hooks are a separate enforcement layer
 # from the permission system.
 #
-# Deliberately narrow and a backstop, not the primary safety mechanism --
+# Deliberately narrow and a backstop, not the primary safety mechanism.
 # GitHub's own branch protection is that (CONSAL_GOALS.md: "the local
 # layer never treated as sufficient on its own"). Does not block all
 # pushes or all CI-workflow-file edits; the PR-review checkpoint covers
@@ -19,7 +19,7 @@
 # parse error.
 #
 # This policy is autonomy-specific, so it's authored and owned here in
-# Consal, not in dco -- dco stays generic (see CONSAL_GOALS.md's
+# Consal, not in dco. dco stays generic (see CONSAL_GOALS.md's
 # architecture rationale). config.generate_subconfig copies this file
 # as-is into each managed project's sub-config directory.
 
@@ -35,7 +35,7 @@ PROJECT_DIR="$(printf '%s' "$INPUT" | jq -r '.cwd // empty' 2>/dev/null || true)
 PROJECT_DIR="${PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-/workspace}}"
 
 block() {
-  echo "consal guardrail: blocked — $1" >&2
+  echo "consal guardrail blocked: $1" >&2
   exit 2
 }
 
@@ -57,12 +57,12 @@ if echo "$COMMAND" | grep -Eq '(^|[[:space:]])git[[:space:]]+push([[:space:]]+-[
   fi
 fi
 
-# gh pr merge — a human always merges
+# gh pr merge: a human always merges
 if echo "$COMMAND" | grep -Eq '(^|[[:space:]])gh[[:space:]]+pr[[:space:]]+merge([[:space:]]|$)'; then
   block "gh pr merge is never allowed; a human always merges."
 fi
 
-# gh repo edit — repo settings are out of scope
+# gh repo edit: repo settings are out of scope
 if echo "$COMMAND" | grep -Eq '(^|[[:space:]])gh[[:space:]]+repo[[:space:]]+edit([[:space:]]|$)'; then
   block "gh repo edit is never allowed; repo settings are out of scope."
 fi
@@ -72,7 +72,7 @@ if echo "$COMMAND" | grep -Eq '(^|[[:space:]])gh[[:space:]]+api([[:space:]]|$).*
   block "modifying branch protection via gh api is never allowed."
 fi
 
-# gh secret set — credential/secret management is out of scope
+# gh secret set: credential/secret management is out of scope
 if echo "$COMMAND" | grep -Eq '(^|[[:space:]])gh[[:space:]]+secret[[:space:]]+set([[:space:]]|$)'; then
   block "gh secret set is never allowed."
 fi

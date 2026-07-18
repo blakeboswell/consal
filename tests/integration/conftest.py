@@ -43,12 +43,12 @@ def consal_managed_project(tmp_path: Path) -> Iterator[ManagedProject]:
     generating the sub-config: dco's git-identity sync and the guardrail
     hook's branch-detection logic both expect a real repo, and
     `git rev-parse --abbrev-ref HEAD` fails (falls back to the literal
-    string "HEAD") on an unborn branch with zero commits -- verified
+    string "HEAD") on an unborn branch with zero commits, verified
     directly, see test_guardrail_hook.py.
 
     Tears down the container and its volumes (`dco --purge`) after the
     test, since each test gets a fresh tmp_path and therefore a distinct
-    DCO_PROJECT_ID -- without this, repeated integration test runs would
+    DCO_PROJECT_ID. Without this, repeated integration test runs would
     accumulate orphaned containers/volumes on the host indefinitely.
     """
     subprocess.run(

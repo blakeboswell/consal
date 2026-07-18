@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Run Consal's integration test tier (real gh/dco/devcontainer) and write
-# the result to a file inside the repo. Run this on the host — this
+# the result to a file inside the repo. Run this on the host. This
 # repo's own dev sandbox has no Docker access, so `dco`/`devcontainer`
 # aren't reachable from in there. Since the sandbox bind-mounts this same
 # repo directory, the output file is readable from inside it afterward.
@@ -10,7 +10,7 @@ cd "$(dirname "$0")/.."
 # CLAUDE_CODE_OAUTH_TOKEN is host-wide and personal, not consal-specific,
 # so it deliberately isn't auto-loaded into every shell (unlike
 # CONSAL_GH_PAT, which lives in this repo's own gitignored .envrc via
-# direnv) -- pulled in here, scoped to just running tests.
+# direnv). It's pulled in here instead, scoped to just running tests.
 SECRETS_FILE="${CONSAL_SECRETS_FILE:-$HOME/.config/claude-code/secrets.env}"
 if [[ -f "$SECRETS_FILE" ]]; then
   # shellcheck disable=SC1090
@@ -21,18 +21,18 @@ mkdir -p .integration-results
 out_file=".integration-results/latest.txt"
 
 # devcontainer's verbose `docker run` logging echoes every containerEnv
-# value verbatim, including secrets passed via ${localEnv:...} -- a real
+# value verbatim, including secrets passed via ${localEnv:...}: a real
 # CLAUDE_CODE_OAUTH_TOKEN leaked this way once already (into this file,
 # then into an AI conversation reading it). Redact known secret env vars
 # by literal string match (not regex, to avoid metacharacter issues) by
 # streaming pytest's combined output through this filter *before* any of
 # it touches disk, rather than writing raw output to a file first and
-# redacting afterward -- that earlier approach left a window, however
+# redacting afterward. That earlier approach left a window, however
 # brief, where an unredacted copy existed on disk. Streaming means no
 # unredacted copy is ever written anywhere, not even transiently.
 #
 # Uses `python3 -c` (script as an argument), not `python3 - <<PYEOF`
-# (script piped via heredoc-stdin) -- verified by hand that the heredoc
+# (script piped via heredoc-stdin). Verified by hand that the heredoc
 # form is a real bug here: `python3 -` reads the *program itself* from
 # stdin, which consumes the same stdin the piped pytest output needs to
 # land on, so the redaction loop below would silently never see any

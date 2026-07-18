@@ -84,10 +84,10 @@ def main(argv: Sequence[str] | None = None) -> int:
             print("consal run: idle, no open issues")
             return 0
         if result.turn.succeeded:
-            print(f"consal run: issue #{result.issue_number} -- turn succeeded")
+            print(f"consal run: issue #{result.issue_number}, turn succeeded")
             return 0
         print(
-            f"consal run: issue #{result.issue_number} -- turn failed "
+            f"consal run: issue #{result.issue_number}, turn failed "
             f"(exit {result.turn.exit_code})",
             file=sys.stderr,
         )
