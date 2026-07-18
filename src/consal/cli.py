@@ -11,9 +11,9 @@ import sys
 from collections.abc import Sequence
 from pathlib import Path
 
-from consal import doctor as doctor_module
+from consal import config, doctor as doctor_module
 from consal.scheduler import run_loop_once
-from consal.settings import SettingsError, resolve_settings
+from consal.settings import DEFAULT_SUB_CONFIG, SettingsError, resolve_settings, write_config_file
 
 
 def _add_common_args(parser: argparse.ArgumentParser) -> None:
@@ -44,6 +44,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="consal")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
+    init_parser = subparsers.add_parser(
+        "init", help="generate a dco sub-config for this project"
+    )
+    _add_common_args(init_parser)
+
     doctor_parser = subparsers.add_parser(
         "doctor", help="run standing self-consistency/reachability checks"
     )
@@ -53,6 +58,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     _add_common_args(run_parser)
 
     args = parser.parse_args(argv)
+
+    if args.command == "init":
+        return _cmd_init(args)
 
     try:
         settings = resolve_settings(
@@ -86,6 +94,33 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 1
 
     return 1
+
+
+def _cmd_init(args: argparse.Namespace) -> int:
+    """`consal init`: generate the sub-config, and record whatever of
+    project-id/repo/sub-config were given in `.consal/config.toml` --
+    unlike `doctor`/`run`, nothing here is required. Generating the
+    sub-config itself needs neither `project_id` nor `repo`
+    (`config.generate_subconfig`'s own signature takes only a workspace
+    and a sub-config name), so `init` doesn't force them up front; a
+    project can fill them in later, by hand or via a later `init` call
+    (which merges into the existing config file, never clobbers it).
+    """
+    workspace = (args.workspace or Path.cwd()).resolve()
+    sub_config = args.sub_config or DEFAULT_SUB_CONFIG
+
+    subconfig_dir = config.generate_subconfig(workspace, sub_config)
+    print(f"consal init: generated sub-config at {subconfig_dir}")
+
+    updates = {"sub_config": sub_config}
+    if args.project_id:
+        updates["project_id"] = args.project_id
+    if args.repo:
+        updates["repo"] = args.repo
+
+    config_path = write_config_file(workspace, **updates)
+    print(f"consal init: wrote {config_path}")
+    return 0
 
 
 if __name__ == "__main__":

@@ -4,6 +4,7 @@ from unittest.mock import MagicMock, patch
 from consal.cli import main
 from consal.container import TurnResult
 from consal.scheduler import TickResult
+from consal.settings import load_config_file
 
 
 @patch("consal.cli.doctor_module.run")
@@ -94,3 +95,66 @@ def test_run_passes_resolved_settings_through(mock_run_loop_once: MagicMock, tmp
         ]
     )
     mock_run_loop_once.assert_called_once_with("myproj", tmp_path.resolve(), "owner/repo", "custom")
+
+
+# init runs the real config.generate_subconfig/write_config_file (no
+# mocking) -- both are fast, pure filesystem operations against tmp_path,
+# no subprocess/network involved, so there's no cost to exercising the
+# real wiring instead of asserting on mocked call shapes.
+
+
+def test_init_generates_subconfig_with_default_name(tmp_path: Path, capsys) -> None:
+    exit_code = main(["init", "--workspace", str(tmp_path)])
+    assert exit_code == 0
+    subconfig_dir = tmp_path / ".devcontainer" / "consal"
+    assert (subconfig_dir / "devcontainer.json").is_file()
+    assert (subconfig_dir / "guardrail-hook.sh").is_file()
+    assert (subconfig_dir / "allowlist.txt").is_file()
+    assert "generated sub-config" in capsys.readouterr().out
+
+
+def test_init_writes_config_file_with_sub_config_default(tmp_path: Path) -> None:
+    main(["init", "--workspace", str(tmp_path)])
+    assert load_config_file(tmp_path) == {"sub_config": "consal"}
+
+
+def test_init_records_project_id_and_repo_when_given(tmp_path: Path) -> None:
+    main(
+        [
+            "init",
+            "--workspace",
+            str(tmp_path),
+            "--project-id",
+            "myproj",
+            "--repo",
+            "owner/repo",
+        ]
+    )
+    assert load_config_file(tmp_path) == {
+        "sub_config": "consal",
+        "project_id": "myproj",
+        "repo": "owner/repo",
+    }
+
+
+def test_init_respects_custom_sub_config_name(tmp_path: Path) -> None:
+    main(["init", "--workspace", str(tmp_path), "--sub-config", "custom"])
+    assert (tmp_path / ".devcontainer" / "custom" / "devcontainer.json").is_file()
+    assert load_config_file(tmp_path) == {"sub_config": "custom"}
+
+
+def test_init_does_not_require_project_id_or_repo(tmp_path: Path) -> None:
+    # unlike doctor/run, init must not go through resolve_settings's
+    # required-field check -- generating a sub-config needs neither.
+    exit_code = main(["init", "--workspace", str(tmp_path)])
+    assert exit_code == 0
+
+
+def test_init_merges_into_existing_config_without_clobbering(tmp_path: Path) -> None:
+    main(["init", "--workspace", str(tmp_path), "--project-id", "p", "--repo", "o/r"])
+    main(["init", "--workspace", str(tmp_path), "--sub-config", "custom"])
+    assert load_config_file(tmp_path) == {
+        "project_id": "p",
+        "repo": "o/r",
+        "sub_config": "custom",
+    }

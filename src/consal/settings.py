@@ -88,3 +88,31 @@ def resolve_settings(
         repo=resolved_repo,
         sub_config=resolved_sub_config,
     )
+
+
+def _toml_string(value: str) -> str:
+    """Serialize a plain string as a TOML basic string."""
+    escaped = value.replace("\\", "\\\\").replace('"', '\\"')
+    return f'"{escaped}"'
+
+
+def write_config_file(workspace: Path, **updates: str) -> Path:
+    """Merge ``updates`` into `<workspace>/.consal/config.toml`, creating
+    it (and its parent directory) if it doesn't exist yet, preserving any
+    existing keys not being updated. Values must be plain strings — the
+    only type this config file's fields ever need.
+
+    Hand-serializes rather than depending on a TOML-writing library:
+    `tomllib` (stdlib, already used to *read* this file) has no write
+    support, and pulling in a third-party writer for three flat string
+    fields would violate the stdlib + subprocess distribution policy for
+    something this simple to do by hand.
+    """
+    existing = load_config_file(workspace)
+    merged = {**existing, **updates}
+
+    config_path = workspace / CONFIG_RELATIVE_PATH
+    config_path.parent.mkdir(parents=True, exist_ok=True)
+    lines = [f"{key} = {_toml_string(value)}" for key, value in merged.items()]
+    config_path.write_text("\n".join(lines) + "\n")
+    return config_path

@@ -2,7 +2,13 @@ from pathlib import Path
 
 import pytest
 
-from consal.settings import Settings, SettingsError, load_config_file, resolve_settings
+from consal.settings import (
+    Settings,
+    SettingsError,
+    load_config_file,
+    resolve_settings,
+    write_config_file,
+)
 
 
 def test_load_config_file_returns_empty_dict_when_missing(tmp_path: Path) -> None:
@@ -74,3 +80,31 @@ def test_resolve_settings_raises_when_repo_missing(tmp_path: Path) -> None:
 def test_resolve_settings_error_names_config_path(tmp_path: Path) -> None:
     with pytest.raises(SettingsError, match=r"\.consal/config\.toml"):
         resolve_settings(workspace=tmp_path)
+
+
+def test_write_config_file_creates_file_and_parent_dir(tmp_path: Path) -> None:
+    config_path = write_config_file(tmp_path, project_id="p", repo="o/r")
+    assert config_path == tmp_path / ".consal" / "config.toml"
+    assert load_config_file(tmp_path) == {"project_id": "p", "repo": "o/r"}
+
+
+def test_write_config_file_merges_with_existing_values(tmp_path: Path) -> None:
+    write_config_file(tmp_path, project_id="p", repo="o/r")
+    write_config_file(tmp_path, sub_config="custom")
+    assert load_config_file(tmp_path) == {
+        "project_id": "p",
+        "repo": "o/r",
+        "sub_config": "custom",
+    }
+
+
+def test_write_config_file_overwrites_only_given_keys(tmp_path: Path) -> None:
+    write_config_file(tmp_path, project_id="old", repo="o/r")
+    write_config_file(tmp_path, project_id="new")
+    assert load_config_file(tmp_path) == {"project_id": "new", "repo": "o/r"}
+
+
+def test_write_config_file_round_trips_special_characters(tmp_path: Path) -> None:
+    tricky = 'has "quotes" and \\backslashes'
+    write_config_file(tmp_path, project_id=tricky)
+    assert load_config_file(tmp_path) == {"project_id": tricky}
