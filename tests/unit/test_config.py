@@ -12,6 +12,7 @@ def test_validate_subconfig_missing_devcontainer_json(tmp_path: Path) -> None:
 def test_validate_subconfig_ok(tmp_path: Path) -> None:
     (tmp_path / "Dockerfile").write_text("FROM scratch\n")
     (tmp_path / "guardrail-hook.sh").write_text("#!/bin/bash\nexit 0\n")
+    (tmp_path / "allowlist.txt").write_text("api.anthropic.com\n")
     (tmp_path / "devcontainer.json").write_text(
         json.dumps({"build": {"dockerfile": "Dockerfile"}})
     )
@@ -20,6 +21,7 @@ def test_validate_subconfig_ok(tmp_path: Path) -> None:
 
 def test_validate_subconfig_missing_dockerfile(tmp_path: Path) -> None:
     (tmp_path / "guardrail-hook.sh").write_text("#!/bin/bash\nexit 0\n")
+    (tmp_path / "allowlist.txt").write_text("api.anthropic.com\n")
     (tmp_path / "devcontainer.json").write_text(
         json.dumps({"build": {"dockerfile": "Dockerfile"}})
     )
@@ -30,11 +32,22 @@ def test_validate_subconfig_missing_dockerfile(tmp_path: Path) -> None:
 
 def test_validate_subconfig_missing_guardrail_hook(tmp_path: Path) -> None:
     (tmp_path / "Dockerfile").write_text("FROM scratch\n")
+    (tmp_path / "allowlist.txt").write_text("api.anthropic.com\n")
     (tmp_path / "devcontainer.json").write_text(
         json.dumps({"build": {"dockerfile": "Dockerfile"}})
     )
     problems = validate_subconfig(tmp_path)
     assert problems == [f"missing guardrail-hook.sh in {tmp_path}"]
+
+
+def test_validate_subconfig_missing_allowlist(tmp_path: Path) -> None:
+    (tmp_path / "Dockerfile").write_text("FROM scratch\n")
+    (tmp_path / "guardrail-hook.sh").write_text("#!/bin/bash\nexit 0\n")
+    (tmp_path / "devcontainer.json").write_text(
+        json.dumps({"build": {"dockerfile": "Dockerfile"}})
+    )
+    problems = validate_subconfig(tmp_path)
+    assert problems == [f"missing allowlist.txt in {tmp_path}"]
 
 
 def test_validate_subconfig_invalid_json(tmp_path: Path) -> None:
@@ -88,6 +101,30 @@ def test_generate_subconfig_writes_claude_settings_with_hook_registered(
     settings = json.loads((tmp_path / ".claude" / "settings.json").read_text())
     command = settings["hooks"]["PreToolUse"][0]["hooks"][0]["command"]
     assert command == "bash /workspace/.devcontainer/eigen/guardrail-hook.sh"
+
+
+def test_generate_subconfig_copies_allowlist(tmp_path: Path) -> None:
+    subconfig_dir = generate_subconfig(tmp_path, "eigen")
+    allowlist = (subconfig_dir / "allowlist.txt").read_text()
+    assert "api.anthropic.com" in allowlist
+
+
+def test_generate_subconfig_mounts_allowlist_with_real_subconfig_name(
+    tmp_path: Path,
+) -> None:
+    """The template ships a __SUBCONFIG_NAME__ placeholder in the
+    allowlist bind-mount source (the mount needs to know its own
+    directory name, which varies per call) -- this must be substituted
+    with the real name, never left in the generated file, and must match
+    whatever subconfig_name was actually passed in (not hardcoded to
+    "eigen" specifically).
+    """
+    subconfig_dir = generate_subconfig(tmp_path, "custom-name")
+    config = json.loads((subconfig_dir / "devcontainer.json").read_text())
+    mounts = " ".join(config["mounts"])
+    assert "__SUBCONFIG_NAME__" not in mounts
+    assert ".devcontainer/custom-name/allowlist.txt" in mounts
+    assert "target=/usr/local/etc/dco-allowlist.txt" in mounts
 
 
 def test_generate_subconfig_references_pat_via_host_env_var(tmp_path: Path) -> None:

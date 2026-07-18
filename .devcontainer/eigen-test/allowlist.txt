@@ -1,0 +1,15 @@
+# eigen-test's own network allowlist — mounted over the shared, empty
+# top-level .devcontainer/allowlist.txt (see init-firewall.sh) so that
+# only containers built from this sub-config get a locked-down
+# default-deny firewall, without touching the default profile.
+#
+# GitHub is always allowed regardless of this file's contents (see
+# init-firewall.sh) -- these are Claude Code's own domains, kept minimal
+# to what `claude -p` actually needs. api.anthropic.com is required;
+# the rest are Claude Code's own telemetry/error-reporting and are safe
+# to drop (a domain that fails to resolve is skipped, not fatal) if any
+# of them ever become a maintenance annoyance.
+api.anthropic.com
+sentry.io
+statsig.anthropic.com
+statsig.com

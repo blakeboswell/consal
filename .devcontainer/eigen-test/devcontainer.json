@@ -15,7 +15,8 @@
   "remoteUser": "node",
   "mounts": [
     "source=claude-code-bashhistory-${localEnv:DCO_PROJECT_ID:default},target=/commandhistory,type=volume",
-    "source=claude-code-config-${localEnv:DCO_PROJECT_ID:default},target=/home/node/.claude,type=volume"
+    "source=claude-code-config-${localEnv:DCO_PROJECT_ID:default},target=/home/node/.claude,type=volume",
+    "source=${localWorkspaceFolder}/.devcontainer/eigen-test/allowlist.txt,target=/usr/local/etc/dco-allowlist.txt,type=bind"
   ],
   "containerEnv": {
     "NODE_OPTIONS": "--max-old-space-size=4096",

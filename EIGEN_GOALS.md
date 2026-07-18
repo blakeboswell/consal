@@ -153,7 +153,49 @@ supplying its own sub-config profile to `dco`, not by `dco` having
 built-in knowledge of any of this:
 
 - A real network boundary during autonomous operation: default-deny with an
-  explicit, narrow allowlist, not "open and hope."
+  explicit, narrow allowlist, not "open and hope." **Correction
+  (2026-07-18):** this was stated as a goal but not actually active —
+  `.devcontainer/allowlist.txt` (the file the shared `../Dockerfile`
+  bakes into every profile's image) was empty, which `init-firewall.sh`'s
+  own documented behavior treats as "firewall fully disabled." Found by
+  reasoning through a direct question: `CLAUDE_CODE_OAUTH_TOKEN` sits in
+  every Eigen sub-config's `containerEnv`, and any process inside the
+  container — including whatever Claude's own Bash tool runs — can read
+  it (verified: Claude Code has no mechanism to expose an env var to its
+  own process while hiding it from its own spawned subprocesses; this is
+  just how process environment inheritance works, not a bug). Nothing
+  was actually stopping a hijacked agent from reading that token and
+  sending it anywhere on the open internet.
+  - **Scoped fix, not a global one.** The user deliberately did not want
+    the *default* profile (this repo's own everyday dev sandbox,
+    `.devcontainer/devcontainer.json`) locked down — that's a separate,
+    later decision. Every Eigen sub-config's `devcontainer.json` now
+    bind-mounts its own `allowlist.txt` over
+    `/usr/local/etc/dco-allowlist.txt` at container-start, overriding the
+    shared, empty top-level one *only* for containers built from that
+    sub-config — without touching the shared `../Dockerfile` or the
+    default profile at all. `templates/allowlist.txt` holds the minimal
+    set `claude -p` actually needs: `api.anthropic.com` (required) plus
+    Claude Code's own telemetry domains (`sentry.io`,
+    `statsig.anthropic.com`, `statsig.com` — safe to drop, since
+    `init-firewall.sh` already skips, not fails on, any domain that
+    doesn't resolve). GitHub is always allowed regardless, per
+    `init-firewall.sh`'s existing behavior.
+  - **Also considered and rejected:** an alternative that would give
+    Eigen sub-configs their own non-shared Dockerfile (so their
+    `COPY allowlist.txt` step could differ from the default profile's).
+    Rejected — `init-firewall.sh`'s own top-of-file comment already
+    warns against exactly this ("don't add a per-profile copy under
+    templates/<name>/: it would look editable/profile-specific but
+    silently never be read... `dco --regen` is therefore sufficient to
+    update this for every profile"), and duplicating ~75 lines of
+    Dockerfile per sub-config to vary one file is worse than a one-line
+    bind-mount override.
+  - `config.generate_subconfig` now substitutes a `__SUBCONFIG_NAME__`
+    placeholder in the template's mount source (the mount needs to know
+    its own sub-config directory name, which varies per call) and copies
+    `allowlist.txt` alongside the guardrail hook;
+    `config.validate_subconfig` checks it's present, same as the hook.
 - A credential scoped to exactly the target repo, never the user's full
   personal access — so a hijacked agent's reach is bounded even if it tries
   to misuse its own credential. **Note (2026-07-14):** SSH and the PAT
