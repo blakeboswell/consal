@@ -1,7 +1,7 @@
 """Integration tests: real `dco`/`devcontainer`, per CONSAL_GOALS.md's
 testing strategy. Excluded from the default run (see `addopts` in
 pyproject.toml); run on the host via scripts/run-integration-tests.sh, not
-inside this repo's own dev sandbox (see the eigen-sandbox-no-docker memory
+inside this repo's own dev sandbox (see the consal-sandbox-no-docker memory
 note).
 
 Depends on `dco --up-only` (see CONSAL_GOALS.md's "Consal/dco interface"

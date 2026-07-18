@@ -1,4 +1,4 @@
-# Eigen: goals document for a self-driving development system
+# Consal: goals document for a self-driving development system
 
 ## Context
 
@@ -27,10 +27,20 @@ separate projects**, not one — see **Architecture** below. This is the
 single biggest structural decision in this document.
 
 This was originally produced as a plan-mode artifact inside the `dco` repo.
-The new project is named **Eigen** — a math term for the value that scales
-a vector's magnitude without changing its direction, matching the actual
-goal: multiplying one developer's output without taking over their
-direction. `dco` keeps its own name; only the new project needed one.
+The new project was first named **Eigen** — a math term for the value
+that scales a vector's magnitude without changing its direction, matching
+the actual goal: multiplying one developer's output without taking over
+their direction.
+
+**Renamed to Consal (2026-07-18).** From *consilience* — the
+leaping-together of otherwise-separate things into one coherent whole —
+crossed with Latin *salire* ("to leap"), and evocative of "console."
+Matches the tool's actual shape at least as well as Eigen did, arguably
+better: Consal is, literally, forcing a convergence of genuinely separate
+pieces — isolated agent sessions, devcontainer environments, the host
+machine, GitHub's own developer-facing surface, and the human
+collaborator — into one coherent, GitHub-native workflow. `dco` keeps its
+own name; only this project's name was ever in question.
 
 ## Architecture: two projects, not one
 
@@ -44,7 +54,7 @@ direction. `dco` keeps its own name; only the new project needed one.
   the guardrail hook, PAT/label logic out of `dco`) is done. `dco.in` went
   638 → 348 lines, its README 274 → ~90. `dco` today is exactly the
   container-lifecycle tool described here, nothing more.
-- **Eigen** (new, Python). Owns everything about
+- **Consal** (new, Python). Owns everything about
   GitHub-driven autonomy: the plan-then-decompose-then-autonomous-loop
   workflow, repo/PAT setup, the label taxonomy, guardrails, scheduling, and
   the hybrid interactive/async interaction model. It **depends on `dco`**
@@ -80,7 +90,7 @@ isn't interested), but worth remembering as a concrete example of a
 stronger enforcement model than `dco`'s current one, if `dco`'s firewall
 approach ever gets revisited. Separately, `clawker` doesn't touch GitHub
 orchestration at all — it only occupies the container-isolation niche, so
-even if it had been adopted, it wouldn't have overlapped with Eigen's
+even if it had been adopted, it wouldn't have overlapped with Consal's
 actual scope.
 
 ## Vision
@@ -116,7 +126,7 @@ autonomously.
    goes away once autonomous operation starts; it's a steering wheel, not
    just a bootstrap-phase tool.
 
-Steps 2-4 are Eigen's behavior, built on containers `dco`
+Steps 2-4 are Consal's behavior, built on containers `dco`
 provides; step 1's container creation is literally just `dco`.
 
 ## Interaction model
@@ -130,9 +140,9 @@ Deliberately hybrid, not one mode or the other:
   human can attach and talk to the container any time, and whatever gets
   typed becomes the next turn in whatever's already running.
 
-This hybrid is Eigen's behavior, not something `dco` itself
+This hybrid is Consal's behavior, not something `dco` itself
 needs to know about — `dco` just keeps being able to launch/reattach to
-whatever container/profile Eigen set up, exactly as it does
+whatever container/profile Consal set up, exactly as it does
 for any project today.
 
 ## Isolation & safety goals
@@ -148,7 +158,7 @@ threats, not just one:
   manipulated into acting against the user's interest.
 
 Concretely, this means (carried forward from what `dco` already got right,
-restated as goals rather than implementation) — all achieved by Eigen
+restated as goals rather than implementation) — all achieved by Consal
 supplying its own sub-config profile to `dco`, not by `dco` having
 built-in knowledge of any of this:
 
@@ -159,7 +169,7 @@ built-in knowledge of any of this:
   bakes into every profile's image) was empty, which `init-firewall.sh`'s
   own documented behavior treats as "firewall fully disabled." Found by
   reasoning through a direct question: `CLAUDE_CODE_OAUTH_TOKEN` sits in
-  every Eigen sub-config's `containerEnv`, and any process inside the
+  every Consal sub-config's `containerEnv`, and any process inside the
   container — including whatever Claude's own Bash tool runs — can read
   it (verified: Claude Code has no mechanism to expose an env var to its
   own process while hiding it from its own spawned subprocesses; this is
@@ -169,7 +179,7 @@ built-in knowledge of any of this:
   - **Scoped fix, not a global one.** The user deliberately did not want
     the *default* profile (this repo's own everyday dev sandbox,
     `.devcontainer/devcontainer.json`) locked down — that's a separate,
-    later decision. Every Eigen sub-config's `devcontainer.json` now
+    later decision. Every Consal sub-config's `devcontainer.json` now
     bind-mounts its own `allowlist.txt` over
     `/usr/local/etc/dco-allowlist.txt` at container-start, overriding the
     shared, empty top-level one *only* for containers built from that
@@ -182,7 +192,7 @@ built-in knowledge of any of this:
     doesn't resolve). GitHub is always allowed regardless, per
     `init-firewall.sh`'s existing behavior.
   - **Also considered and rejected:** an alternative that would give
-    Eigen sub-configs their own non-shared Dockerfile (so their
+    Consal sub-configs their own non-shared Dockerfile (so their
     `COPY allowlist.txt` step could differ from the default profile's).
     Rejected — `init-firewall.sh`'s own top-of-file comment already
     warns against exactly this ("don't add a per-profile copy under
@@ -199,12 +209,12 @@ built-in knowledge of any of this:
 - A credential scoped to exactly the target repo, never the user's full
   personal access — so a hijacked agent's reach is bounded even if it tries
   to misuse its own credential. **Note (2026-07-14):** SSH and the PAT
-  (`GH_TOKEN`/`EIGEN_GH_PAT`) are unrelated mechanisms — the PAT makes
+  (`GH_TOKEN`/`CONSAL_GH_PAT`) are unrelated mechanisms — the PAT makes
   `gh` commands and HTTPS git operations work, but does nothing for an
   `ssh://`/`git@github.com:...` remote, which still needs a trusted host
   key and a private key regardless of any PAT. Found by trying to push
   this very repo from inside its own dev sandbox, which has neither.
-  Eigen-managed projects need **HTTPS remotes**, not SSH, for the
+  Consal-managed projects need **HTTPS remotes**, not SSH, for the
   scoped-credential isolation goal to actually cover `git push`, not just
   `gh` API calls — relevant once `github.py`/`scheduler.py` exist and
   actually push branches from inside a container.
@@ -248,7 +258,7 @@ scope, not something being quietly dropped.
 
 These held up as genuine engineering constraints independent of language or
 architecture — they're requirements on *whatever* gets built next
-(primarily Eigen, since that's where the equivalent complexity
+(primarily Consal, since that's where the equivalent complexity
 will live), not retrospective bash war stories:
 
 1. Config that references other files (a build file pointing at a
@@ -278,13 +288,13 @@ will live), not retrospective bash war stories:
 
 ## Decided
 
-- **SDK vs. CLI launcher (2026-07-14): CLI launcher.** Eigen drives Claude
+- **SDK vs. CLI launcher (2026-07-14): CLI launcher.** Consal drives Claude
   by launching the `claude` CLI with a constructed prompt (e.g. "here's
   issue #42, implement it"), the same shape as `dco`'s old bash autonomous
   mode, and lets Claude Code's own agent loop handle the actual work — file
-  edits, tests, git, all of it. Eigen's own code is the orchestration layer
+  edits, tests, git, all of it. Consal's own code is the orchestration layer
   around that: watch GitHub, decide what's next, hand off a prompt, repeat.
-  Rejected alternative: the Claude Agent SDK, which would have Eigen
+  Rejected alternative: the Claude Agent SDK, which would have Consal
   implement its own agent loop and tools in Python for full step-level
   programmatic control. Rejected because it's substantially more
   implementation effort to rebuild what Claude Code already provides, and
@@ -294,13 +304,13 @@ will live), not retrospective bash war stories:
   constraints turns out to need hooks finer-grained than Claude Code's own
   permission/hook system exposes).
 
-- **Eigen/`dco` interface (2026-07-14): plain `dco` + `devcontainer exec`,
+- **Consal/`dco` interface (2026-07-14): plain `dco` + `devcontainer exec`,
   never `--claude`, for autonomous turns.** `dco --claude`'s tmux/attach
   path is interactive-only by construction — a human at a TTY, no defined
   "done" signal — so it's reserved for step 2 (interactive planning) and
   direct human intervention (step 4), never for autonomous turns.
   - **Sub-config contents:** a directory, matching how `--sub-config`
-    already works — `.devcontainer/eigen/devcontainer.json` plus its own
+    already works — `.devcontainer/consal/devcontainer.json` plus its own
     allowlist entries (referencing the shared `../Dockerfile` /
     `init-firewall.sh` `dco` already provides), plus the guardrail hook
     script. All checked into the project's own repo like any other
@@ -321,23 +331,23 @@ will live), not retrospective bash war stories:
     its usage pool with the user's own interactive Claude Code sessions,
     unlike API-key billing, which never competes with personal usage but
     costs money independently. Requires that token to be generated once
-    and set on any host actually running Eigen-managed containers
+    and set on any host actually running Consal-managed containers
     headlessly.
   - **Profile vs. runtime state split:** the profile above is static,
     checked-in config. Runtime state (active issue, loop status, logs) is
-    churny and lives outside git, in a host-side `~/.eigen/<project-id>/`
+    churny and lives outside git, in a host-side `~/.consal/<project-id>/`
     directory or volume — mirroring how `dco` already keeps `~/.claude`
     out of the repo.
   - **Headless bring-up needed one small additive flag on `dco`:
     `--up-only`.** **Correction (2026-07-14):** the original version of
-    this bullet assumed plain `dco --sub-config eigen` (no `--claude`)
+    this bullet assumed plain `dco --sub-config consal` (no `--claude`)
     already just ensures the container is up and returns. Reading `dco`'s
     actual source (`dco.in`) showed that's wrong — every path through
     `main()` ends by exec'ing an interactive shell or the `--claude` tmux
     session; there was no headless "bring it up, don't attach" mode at
     all. The real primitive `dco` uses internally is `devcontainer up
     --workspace-folder ... --config ...`, immediately followed by two
-    things Eigen would otherwise have had to reimplement to call that
+    things Consal would otherwise have had to reimplement to call that
     directly itself:
     - `DCO_PROJECT_ID`, a hash of workspace path + sub-config name
       (`project_id()` in `dco.in`) that `devcontainer.json`'s
@@ -351,9 +361,9 @@ will live), not retrospective bash war stories:
       it fails silently rather than loudly.
     - Git identity sync (`git config --global user.name`/`user.email`,
       read from the host) — `dco` already owns this; a second copy in
-      Eigen has to be kept in lockstep by hand.
+      Consal has to be kept in lockstep by hand.
 
-    So instead of Eigen reaching around `dco` to call `devcontainer up`
+    So instead of Consal reaching around `dco` to call `devcontainer up`
     directly, `dco` gets one small, additive flag: `--up-only` — runs
     everything `main()` already does up through git-identity sync
     (scaffold/self-heal, compute+export `DCO_PROJECT_ID`, `devcontainer
@@ -365,12 +375,12 @@ will live), not retrospective bash war stories:
     matching `run_turn`'s `--workspace-folder`, rather than relying on the
     calling process's cwd matching dco's positional `[path]` argument
     implicitly. `DCO_PROJECT_ID` is consumed only at `devcontainer
-    up` time, so Eigen's per-turn `run_turn` needs no knowledge of it at
+    up` time, so Consal's per-turn `run_turn` needs no knowledge of it at
     all — the rest of this decision (per-turn `devcontainer exec ... --
     claude -p`, synchronous exit-code signal, container reuse) stands
-    unchanged. Eigen still drives each turn itself via `devcontainer exec
+    unchanged. Consal still drives each turn itself via `devcontainer exec
     --workspace-folder ... --config ... -- claude -p "$PROMPT"`, a public
-    CLI Eigen is free to call directly — growing `dco` a new `--exec`-style
+    CLI Consal is free to call directly — growing `dco` a new `--exec`-style
     flag would re-add autonomy-shaped surface to the tool this project
     just spent effort stripping it out of. **Correction (2026-07-14):**
     `run_turn` initially omitted `--config`, matching only half of what
@@ -379,14 +389,14 @@ will live), not retrospective bash war stories:
     (the default profile) for matching which running container to attach
     to when `--config` is omitted, which doesn't match a container
     brought up via a named `--sub-config` and fails with "Dev container
-    not found". Caught by the `eigen_managed_project` integration test
+    not found". Caught by the `consal_managed_project` integration test
     fixture (a disposable project with no pre-existing default-profile
     container to fall back onto by accident, unlike the long-lived real
     repo the earlier passing tests happened to run against).
   - **Success/failure signal comes free:** `devcontainer exec` is a
     synchronous foreground subprocess with a real exit code and captured
     stdout/stderr, so lesson #4 (explicit return value) is satisfied by
-    construction — no idle-vs-working ambiguity, since Eigen is the one
+    construction — no idle-vs-working ambiguity, since Consal is the one
     blocking on the call.
   - **Container reuse, not fresh-per-task:** one container persists for
     the whole autonomous run, rebuilt only when the profile changes —
@@ -397,24 +407,24 @@ will live), not retrospective bash war stories:
     issue N into issue N+1). Default to reuse for v1; revisit if drift
     turns out to be a real problem.
 
-  Net effect: `dco`'s interface to Eigen is almost exactly what it is
+  Net effect: `dco`'s interface to Consal is almost exactly what it is
   today, plus one small additive flag — `dco --sub-config <name>
-  --up-only` for bring-up. Every per-turn call after that is Eigen calling
+  --up-only` for bring-up. Every per-turn call after that is Consal calling
   the public `devcontainer` CLI directly.
 
 - **Distribution model (2026-07-14): a small package, stdlib + subprocess
   only.** This splits into two independent axes that the original framing
   ("stdlib-only single file vs. a proper package") bundled together:
-  - **Dependency policy: stay stdlib + subprocess.** Eigen already depends
+  - **Dependency policy: stay stdlib + subprocess.** Consal already depends
     on `dco` by shelling out to it, the same way `dco` shells out to
     `docker`/`gh`/`devcontainer`. Continue that pattern one level up:
-    Eigen talks to GitHub by shelling out to `gh` (parsing its JSON output
+    Consal talks to GitHub by shelling out to `gh` (parsing its JSON output
     with stdlib `json`), not via `PyGithub`/`requests`. No third-party
     runtime dependencies. Preserves the same auditability property that
     motivated trimming `dco` itself down to ~350 lines — nothing to trust
     beyond stdlib and the CLIs already being shelled out to.
-  - **File layout: a package (`src/eigen/`), not one file.** Breaks from
-    `dco`'s own single-file precedent, deliberately. The reason Eigen is
+  - **File layout: a package (`src/consal/`), not one file.** Breaks from
+    `dco`'s own single-file precedent, deliberately. The reason Consal is
     Python and not bash is that "the part that needs Python's
     testing/documentation tooling is exactly the part that's complex and
     evolving" — that only pays off with real module boundaries (GitHub
@@ -422,7 +432,7 @@ will live), not retrospective bash war stories:
     loop are genuinely separate concerns). A single file fights the
     unit/integration test split below.
   - **No PyPI distribution needed** — single-user tool. `pipx install -e
-    .` (or bare `python3 -m eigen`) from the checkout is the whole story;
+    .` (or bare `python3 -m consal`) from the checkout is the whole story;
     skip packaging ceremony beyond what `pyproject.toml`/pytest need.
 
 - **Testing strategy (2026-07-14): unit/integration split mapped directly
@@ -431,7 +441,7 @@ will live), not retrospective bash war stories:
     fixtures, fast and deterministic.
   - Standing reachability check (allowlist/endpoints) → **unit-test the
     checker logic** against mocked good/bad hosts. The live check itself
-    ships as a product feature (an `eigen doctor` command), not a CI
+    ships as a product feature (a `consal doctor` command), not a CI
     assertion — network state isn't CI's job to assert.
   - Secret sanitization vs. terminal escape sequences → **unit**, against
     real byte-sequence fixtures (actual ANSI/bracketed-paste bytes), never
@@ -457,15 +467,15 @@ will live), not retrospective bash war stories:
   only after shipping." Coverage gets judged against "would this have
   caught the last few real bugs" (lesson #6), not against a passing count.
 
-- **Guardrail hook ownership (2026-07-14): authored fresh in Eigen, no
+- **Guardrail hook ownership (2026-07-14): authored fresh in Consal, no
   Python-side reimplementation.** The local-guardrail layer from
   "Isolation & safety goals" (block `git push --force`, direct pushes to
   `main`/`master`, `gh pr merge`, branch-protection tampering, `gh secret
   set`) is a Claude Code `PreToolUse` hook — which has to be a shell
   command, since that's the interface Claude Code's hook system calls.
   There is no legitimate Python equivalent to build: a parallel policy
-  checker in Eigen's own code would never actually run in the enforcement
-  path, since Eigen (orchestrating from outside the container via
+  checker in Consal's own code would never actually run in the enforcement
+  path, since Consal (orchestrating from outside the container via
   `devcontainer exec`) has no visibility into individual Bash tool calls
   Claude Code makes mid-turn — it only ever sees a turn's aggregate exit
   code. Building one anyway would be dead code that could silently drift
@@ -476,7 +486,7 @@ will live), not retrospective bash war stories:
   has been deleted. The policy itself is genuinely autonomy-specific (not
   something `dco` should know about, consistent with the whole
   architecture split), so it's authored and owned as a static template in
-  Eigen: `src/eigen/templates/guardrail-hook.sh`, hand-written, ~10
+  Consal: `src/consal/templates/guardrail-hook.sh`, hand-written, ~10
   pattern checks, no generation from a Python policy DSL.
   `config.generate_subconfig` copies it into each managed project's
   `.devcontainer/<name>/` and writes a `.claude/settings.json` at the
@@ -495,7 +505,7 @@ will live), not retrospective bash war stories:
   deleted from here too. The policy was sound; the ownership conclusion
   it implied wasn't.)
 
-## Explicitly deferred (Eigen specifics, not yet decided)
+## Explicitly deferred (Consal specifics, not yet decided)
 
 - **Documentation structure in detail.** Direction agreed (docstrings for
   API-level detail, a lean README for quickstart/usage only, a separate
@@ -507,4 +517,4 @@ will live), not retrospective bash war stories:
 - Reimplementing GitHub's own issue/PR primitives.
 - `dco` reimplementing anything about GitHub, autonomy, or Claude Code's
   own agentic-loop/scheduling primitives — that entire domain now belongs
-  to Eigen, not `dco`, by design.
+  to Consal, not `dco`, by design.

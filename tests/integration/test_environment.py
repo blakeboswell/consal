@@ -3,7 +3,7 @@ testing strategy. Excluded from the default run (see `addopts` in
 pyproject.toml).
 
 Run these on the **host**, not inside this repo's own dev sandbox — the
-sandbox has no Docker access by design (see the eigen-sandbox-no-docker
+sandbox has no Docker access by design (see the consal-sandbox-no-docker
 memory note), so `dco`/`devcontainer` aren't reachable from in there.
 `scripts/run-integration-tests.sh` runs this tier and writes the output to
 `.integration-results/latest.txt` for review.
