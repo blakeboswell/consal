@@ -2,32 +2,12 @@
 
 ## Context
 
-consal is a Python tool for GitHub-driven autonomous development, built
-on top of `dco`, a bash tool for launching sandboxed devcontainers to
-run Claude Code. `dco` and consal are two components of one system,
-cleanly separated by concern: `dco` owns container lifecycle, consal
-owns everything about GitHub-driven autonomy on top of it. See
-**Architecture** below.
-
-## Architecture
-
-- **`dco`** is a minimal, fully generic container-lifecycle tool: it
-  creates a sandboxed devcontainer, keeps it alive, reattaches to it,
-  and manages named sub-config profiles and persistent volumes. It has
-  no built-in concept of "autonomous mode," GitHub, PATs, or labels.
-- **consal** (this project) owns everything about GitHub-driven
-  autonomy: the plan-then-decompose-then-autonomous-loop workflow,
-  repo/PAT setup, guardrails, scheduling, and the hybrid
-  interactive/async interaction model. It depends on `dco` the way
-  `dco` depends on `docker`/`gh`/`devcontainer`, shelling out to it for
-  container lifecycle via `dco`'s generic `--sub-config` mechanism,
-  supplying its own custom profile/template rather than requiring `dco`
-  to know anything about consal.
-
-Keeping container-lifecycle concerns in `dco` and autonomy-specific
-concerns in consal keeps the stable, generic part simple, and isolates
-the complex, still-evolving part where Python's testing and
-documentation tooling actually pays for itself.
+consal is a Python tool for GitHub-driven autonomous development: point
+it at a project idea, and it becomes a sandboxed AI collaborator
+managed entirely through GitHub. It depends on `dco`, a devcontainer
+launcher, for sandboxed container lifecycle, the same way it depends
+on `gh` and `devcontainer`. All container interaction is wrapped by
+consal's own commands; an end user never needs to know `dco` exists.
 
 ## Prior art (why we're not adopting an existing tool)
 
@@ -35,18 +15,17 @@ The "run Claude Code in an isolated Docker container behind an egress
 firewall" space already has multiple real implementations (`clawker`,
 `ClaudeBox`, `sandclaude`, `codex-lockbox`, `agentbox`), so "container
 isolation" alone isn't a differentiator. `clawker` is the most
-sophisticated of these, a Go project that enforces its network
-boundary via eBPF from a separate control-plane process outside the
-container, a stronger enforcement point than `dco`'s own
-passwordless-sudo-based in-container firewall. It's not adopted here:
-it's an early-stage, considerably more complex dependency to take on
-for a network-isolation improvement that isn't the primary safety
-lever this system relies on (see "Isolation & safety goals" below),
-when the equivalent container-lifecycle functionality `dco` already
-provides is a few hundred lines of bash. `clawker` also doesn't touch
-GitHub orchestration at all; it only occupies the container-isolation
-niche, so it wouldn't overlap with consal's actual scope even if
-adopted.
+sophisticated of these, enforcing its network boundary via eBPF from a
+separate control-plane process outside the container, a stronger
+approach than the simple in-container firewall this system currently
+uses. It's not adopted here: it's an early-stage, considerably more
+complex dependency to take on for a network-isolation improvement that
+isn't the primary safety lever this system relies on (see "Isolation &
+safety goals" below), when the equivalent container-lifecycle
+functionality is already a few hundred lines of bash. `clawker` also
+doesn't touch GitHub orchestration at all; it only occupies the
+container-isolation niche, so it wouldn't overlap with consal's actual
+scope even if adopted.
 
 ## Vision
 
@@ -106,15 +85,14 @@ section records the principle, not its implementation.
 
 ## The workflow
 
-1. **Setup.** Create a container (via `dco`) and a GitHub repo for the
-   project idea.
+1. **Setup.** Create a container and a GitHub repo for the project
+   idea.
 2. **Interactive planning.** A synchronous session (human + Claude,
-   attached to the container, talking directly: the existing `dco
-   --claude` interaction shape) produces a plan, written to the
-   workspace as an actual file and version-controlled with git. The
-   plan is a living artifact: not a rigid one-time spec, expected to
-   evolve as the project develops, not something frozen after this
-   first session.
+   attached to the container, talking directly) produces a plan,
+   written to the workspace as an actual file and version-controlled
+   with git. The plan is a living artifact: not a rigid one-time spec,
+   expected to evolve as the project develops, not something frozen
+   after this first session.
 3. **Autonomous operation.** The AI acts with real GitHub agency, not
    as a worker that only consumes issues someone else labeled: it
    decomposes the plan into issues (high-level idea → components →
@@ -129,9 +107,6 @@ section records the principle, not its implementation.
    it. This channel never goes away once autonomous operation starts;
    it's a steering wheel, not just a bootstrap-phase tool.
 
-Steps 2-4 are consal's behavior, built on containers `dco` provides;
-step 1's container creation is literally just `dco`.
-
 ## Interaction model
 
 Deliberately hybrid, not one mode or the other:
@@ -142,10 +117,6 @@ Deliberately hybrid, not one mode or the other:
 - **Sync / interactive** for planning and for direct intervention: the
   human can attach and talk to the container any time, and whatever
   gets typed becomes the next turn in whatever's already running.
-
-This hybrid is consal's behavior, not something `dco` itself needs to
-know about. `dco` just keeps being able to launch/reattach to whatever
-container/profile consal set up, exactly as it does for any project.
 
 ## Isolation & safety goals
 
@@ -159,9 +130,8 @@ distinct threats, not just one:
   poisoned dependency, injected instructions in an issue/PR comment)
   and is manipulated into acting against the user's interest.
 
-Concretely, this means the following, all achieved by consal supplying
-its own sub-config profile to `dco`, not by `dco` having built-in
-knowledge of any of this. The primary lever is minimizing what's
+Concretely, this means the following, achieved through consal's own
+sub-config profile. The primary lever is minimizing what's
 inside the container and how far any one credential reaches, rather
 than trying to build a perfect wall against an agent already inside
 sending data out: a hijacked agent that has nothing valuable to steal
@@ -291,8 +261,8 @@ current ceiling on ambition.
   the container directly *is* the intervention mechanism. Whatever's
   typed becomes the next conversational turn in whatever's already
   running, no pause/queue/redirect machinery to build. This is close
-  to free: it's what a persistent, attachable session (via `dco`)
-  already gives you.
+  to free: it's what a persistent, attachable session already gives
+  you.
 
 Both of these are named as v1 simplifications of a stated goal, not
 the goal itself. The configurability described above is real future
@@ -351,6 +321,11 @@ architecture:
   is interactive-only by construction (a human at a TTY, no defined
   "done" signal), so it's reserved for step 2 (interactive planning)
   and direct human intervention (step 4), never for autonomous turns.
+  - **Open direction, not yet designed:** this attach flow is
+    currently a direct `dco --claude` invocation, the one place a user
+    still has to know `dco`'s name. A thin consal-owned wrapper around
+    it (so every path, autonomous or interactive, goes through a
+    consal command) is a natural next step; not built yet.
   - **Sub-config contents:** a directory, matching how `--sub-config`
     already works: `.devcontainer/consal/devcontainer.json` plus its
     own allowlist entries (referencing the shared `../Dockerfile` /
@@ -515,9 +490,9 @@ architecture:
   turn's aggregate exit code. Building one anyway would be dead code
   that could silently drift from what the real hook actually enforces.
 
-  The policy itself is genuinely autonomy-specific (not something
-  `dco` should know about, consistent with the whole architecture
-  split), so it's authored and owned as a static template in consal:
+  The policy itself is genuinely autonomy-specific, not something
+  `dco`, a generic dependency, needs to know about, so it's authored
+  and owned as a static template in consal:
   `src/consal/templates/guardrail-hook.sh`, hand-written, ~10 pattern
   checks, no generation from a Python policy DSL.
   `config.generate_subconfig` copies it into each managed project's
@@ -583,6 +558,4 @@ architecture:
 ## Non-goals
 
 - Reimplementing GitHub's own issue/PR primitives.
-- `dco` reimplementing anything about GitHub, autonomy, or Claude
-  Code's own agentic-loop/scheduling primitives: that entire domain
-  now belongs to consal, not `dco`, by design.
+- Reimplementing `dco`'s (or any other dependency's) job inside consal.
