@@ -222,7 +222,8 @@ already exposes its own multi-agent primitives (parallel sub-agent
 dispatch, adversarial verification, synthesis) inside a single `claude
 -p` session (see "SDK vs. CLI launcher" below). The sophistication
 lives in how consal prompts and configures a turn to invoke that
-pattern by default for suitable issues.
+pattern by default for suitable issues. Plan decomposition (see
+"Decided" below) is the first concrete instance of this pattern.
 
 Which specific capabilities belong in the default set beyond this
 (research-specific conventions: reproducibility checks, data
@@ -315,6 +316,51 @@ architecture:
   approach's guardrails prove too coarse in practice, e.g. if
   enforcing the engineering principles above turns out to need hooks
   finer-grained than Claude Code's own permission/hook system exposes.
+
+- **Plan decomposition: a single dispatched turn, orchestrator-workers
+  pattern when the plan warrants it, marker-based idempotency.**
+  Decomposing the plan into issues (see "The workflow," step 3) is
+  dispatched the same way issue-work turns are: a new prompt
+  (`prompt_for_decomposition`), sent through the existing `run_turn`
+  mechanism, no new Python-side orchestration, consistent with the
+  SDK-vs-CLI decision above. The dispatched turn itself acts as the
+  orchestrator described in "Opinionated defaults, not a blank
+  framework." That's a deliberate pattern match, not just a default
+  applied out of habit: per Anthropic's own published guidance on
+  agent design, the orchestrator-workers pattern specifically suits
+  tasks where the number and shape of subtasks can't be predicted in
+  advance, and decomposing a plan into issues is exactly that kind of
+  task.
+  - **Effort scales with plan complexity, not fixed.** Multi-agent
+    dispatch costs roughly 15x the tokens of a single call, so fanning
+    out to parallel sub-agents is only worth it once a plan has enough
+    independent top-level components to justify it; a small plan gets
+    decomposed in one direct pass instead. The prompt states this
+    threshold explicitly rather than leaving the orchestrating turn to
+    guess.
+  - **Sub-agent task descriptions need real specificity.** Vague
+    delegation ("look at this part of the plan") reliably produces
+    duplicate or overlapping work between sub-agents, a documented
+    failure mode in Anthropic's own multi-agent research system. Each
+    sub-agent, when one is used, gets an explicit objective, a
+    non-overlapping scope boundary, and the existing issue list handed
+    to it directly rather than told to re-fetch it itself.
+  - **Idempotency via a deterministic marker, not a coarse re-run
+    gate.** A hash-the-whole-plan-file gate would re-evaluate
+    everything on any edit, even one unrelated to most sections.
+    Instead, each issue consal creates from the plan carries a stable
+    marker tied to its plan section (e.g. a hidden `<!--
+    consal-plan-ref: <slug> -->` in the issue body); the decomposition
+    turn checks for existing markers before filing anything new.
+    GitHub itself is the source of truth for what's already been
+    decomposed, no separate state file needed. Simpler and more
+    auditable than semantic-similarity duplicate detection, and
+    consistent with the project's stdlib-only, no-new-dependency
+    philosophy.
+  - **Does not close or edit stale issues.** Only ever adds new ones
+    for now; autonomously closing issues that no longer match a
+    revised plan is a real question but not one to solve on the first
+    pass.
 
 - **consal/`dco` interface: plain `dco` + `devcontainer exec`, never
   `--claude`, for autonomous turns.** `dco --claude`'s tmux/attach path
