@@ -1,7 +1,7 @@
-"""Integration test: the real `scheduler.run_loop_once` chain. Real
-container bring-up, real `gh` reads, real state persistence, against a
-live GitHub repo. Excluded from the default run (see `addopts` in
-pyproject.toml).
+"""Integration test: the real `scheduler.run_loop_once` and
+`scheduler.dispatch_decomposition` chains. Real container bring-up, real
+`gh` reads, real state persistence, against a live GitHub repo. Excluded
+from the default run (see `addopts` in pyproject.toml).
 
 Deliberately mocks `container.run_turn` and `github.comment_on_issue`,
 the same reasoning already applied twice elsewhere in this suite:
@@ -11,13 +11,14 @@ the same reasoning already applied twice elsewhere in this suite:
 - `test_github.py` never exercises `create_issue`/`comment_on_issue` for
   real in a way that spams the actual project repo on every run.
 
-Letting a real, unscoped `claude -p` turn "work" a live issue against
-`blakeboswell/consal` combines both risks at once (uncontrolled model
-behavior *and* a real mutating write), so this test keeps the real chain
-up through issue *selection* (real `list_open_issues`, real prompt
-construction from a real issue's real title/body, real state
-persistence), and mocks only the two operations that would actually let
-an open-ended agent turn loose or leave test noise on the repo.
+Letting a real, unscoped `claude -p` turn "work" a live issue (or file
+real issues from a real plan) against `blakeboswell/consal` combines
+both risks at once (uncontrolled model behavior *and* a real mutating
+write), so these tests keep the real chain up through everything short
+of the turn itself (real `list_open_issues`, real prompt construction
+from real issue/plan content, real state persistence, real container
+bring-up), and mock only the operations that would actually let an
+open-ended agent turn loose or leave test noise on the repo.
 """
 
 from __future__ import annotations
@@ -29,7 +30,7 @@ import pytest
 
 from consal import github, state
 from consal.container import TurnResult
-from consal.scheduler import run_loop_once
+from consal.scheduler import dispatch_decomposition, run_loop_once
 
 from .conftest import ManagedProject
 
@@ -110,3 +111,29 @@ def test_run_loop_once_dispatches_a_real_issue(
     assert str(real_test_issue["number"]) in call_args[2]
 
     assert state.read_active_issue(clean_scheduler_state) == real_test_issue["number"]
+
+
+def test_dispatch_decomposition_against_a_real_container(
+    consal_managed_project: ManagedProject,
+) -> None:
+    plan_text = "## Auth\nAdd a login page.\n\n## Docs\nWrite the README."
+
+    with patch("consal.scheduler.container.run_turn") as mock_run_turn:
+        mock_run_turn.return_value = TurnResult(exit_code=0, stdout="", stderr="")
+
+        result = dispatch_decomposition(
+            consal_managed_project.root,
+            consal_managed_project.subconfig_name,
+            REPO,
+            plan_text,
+        )
+
+        mock_run_turn.assert_called_once()
+        call_args = mock_run_turn.call_args[0]
+
+    assert result.succeeded is True
+    assert call_args[0] == consal_managed_project.root
+    assert call_args[1] == consal_managed_project.subconfig_name
+    assert REPO in call_args[2]
+    assert "## Auth\nAdd a login page." in call_args[2]
+    assert "consal-plan-ref" in call_args[2]
