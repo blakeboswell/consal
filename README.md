@@ -1,4 +1,4 @@
-# Consal
+# consal
 
 A self-driving development system: point it at a project idea and it
 decomposes a plan into GitHub issues, then works them autonomously inside
@@ -19,7 +19,7 @@ Not yet built:
 - **Plan decomposition.** Turning a high-level plan into GitHub issues
   isn't automated; issues have to already exist. The interactive
   planning session itself (step 2 of the workflow in `CONSAL_GOALS.md`)
-  is just `dco --claude` directly; no Consal code is involved in that
+  is just `dco --claude` directly; no consal code is involved in that
   step at all.
 - **A scheduling/polling loop.** `consal run` performs exactly one tick.
   Running it repeatedly (cron, a shell loop, `watch`) is up to you for

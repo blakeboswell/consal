@@ -1,21 +1,13 @@
-# Consal: goals document for an opinionated tool for technically oriented research projects
+# consal: goals document for an opinionated tool for technically oriented research projects
 
 ## Context
 
-Consal is a Python tool for GitHub-driven autonomous development, built
+consal is a Python tool for GitHub-driven autonomous development, built
 on top of `dco`, a bash tool for launching sandboxed devcontainers to
-run Claude Code. `dco` and Consal are two components of one system,
-cleanly separated by concern: `dco` owns container lifecycle, Consal
+run Claude Code. `dco` and consal are two components of one system,
+cleanly separated by concern: `dco` owns container lifecycle, consal
 owns everything about GitHub-driven autonomy on top of it. See
 **Architecture** below.
-
-The name Consal comes from *consilience* (the leaping-together of
-otherwise-separate things into one coherent whole), crossed with Latin
-*salire* ("to leap"), and is evocative of "console": Consal forces a
-convergence of genuinely separate pieces (isolated agent sessions,
-devcontainer environments, the host machine, GitHub's own
-developer-facing surface, and the human collaborator) into one
-coherent, GitHub-native workflow.
 
 ## Architecture
 
@@ -23,17 +15,17 @@ coherent, GitHub-native workflow.
   creates a sandboxed devcontainer, keeps it alive, reattaches to it,
   and manages named sub-config profiles and persistent volumes. It has
   no built-in concept of "autonomous mode," GitHub, PATs, or labels.
-- **Consal** (this project) owns everything about GitHub-driven
+- **consal** (this project) owns everything about GitHub-driven
   autonomy: the plan-then-decompose-then-autonomous-loop workflow,
   repo/PAT setup, guardrails, scheduling, and the hybrid
   interactive/async interaction model. It depends on `dco` the way
   `dco` depends on `docker`/`gh`/`devcontainer`, shelling out to it for
   container lifecycle via `dco`'s generic `--sub-config` mechanism,
   supplying its own custom profile/template rather than requiring `dco`
-  to know anything about Consal.
+  to know anything about consal.
 
 Keeping container-lifecycle concerns in `dco` and autonomy-specific
-concerns in Consal keeps the stable, generic part simple, and isolates
+concerns in consal keeps the stable, generic part simple, and isolates
 the complex, still-evolving part where Python's testing and
 documentation tooling actually pays for itself.
 
@@ -42,25 +34,23 @@ documentation tooling actually pays for itself.
 The "run Claude Code in an isolated Docker container behind an egress
 firewall" space already has multiple real implementations (`clawker`,
 `ClaudeBox`, `sandclaude`, `codex-lockbox`, `agentbox`), so "container
-isolation" alone isn't a differentiator. `clawker` in particular is a
-mature, actively-maintained Go project whose threat model ("you can't
-reliably stop an agent from being prompt-injected, so strip the
-injection of any power to hurt you") matches this document's isolation
-goals almost exactly, and whose enforcement architecture is arguably
-*stronger* than `dco`'s: it uses eBPF to enforce the network boundary
-**outside** the container via a separate control-plane process, so the
-agent container has no path to its own firewall rules at all, whereas
-`dco`'s firewall runs *inside* the container via a passwordless-sudo
-script. Worth remembering as a concrete example of a stronger
-enforcement model than `dco`'s current one, if `dco`'s firewall
-approach is ever revisited. `clawker` doesn't touch GitHub
-orchestration at all, though; it only occupies the container-isolation
-niche, so it wouldn't overlap with Consal's actual scope even if
+isolation" alone isn't a differentiator. `clawker` is the most
+sophisticated of these, a Go project that enforces its network
+boundary via eBPF from a separate control-plane process outside the
+container, a stronger enforcement point than `dco`'s own
+passwordless-sudo-based in-container firewall. It's not adopted here:
+it's an early-stage, considerably more complex dependency to take on
+for a network-isolation improvement that isn't the primary safety
+lever this system relies on (see "Isolation & safety goals" below),
+when the equivalent container-lifecycle functionality `dco` already
+provides is a few hundred lines of bash. `clawker` also doesn't touch
+GitHub orchestration at all; it only occupies the container-isolation
+niche, so it wouldn't overlap with consal's actual scope even if
 adopted.
 
 ## Vision
 
-**Consal is an opinionated tool for managing technically oriented
+**consal is an opinionated tool for managing technically oriented
 research projects, using GitHub as the UI and Claude as the backend.**
 A single-user tool built around the operator's own workflow, framed
 around who that operator actually is.
@@ -72,8 +62,8 @@ someone capable of directing a technical project and judging whether
 an explanation actually holds together, but code literacy isn't
 assumed. GitHub literacy *is* assumed: navigating issues and PRs, and
 reviewing a diff in the GitHub UI, is something the user can always do
-and is expected to know how to do. The gap Consal exists to close is
-understanding the code, not operating GitHub. Consal and Claude
+and is expected to know how to do. The gap consal exists to close is
+understanding the code, not operating GitHub. consal and Claude
 translate technical work into plain language and provide coaching
 where it's actually needed, without assuming the researcher already
 knows how to run a software project.
@@ -83,15 +73,15 @@ steered through GitHub's own developer-facing surface (issues, PRs,
 comments), with an interactive channel always available as a direct
 escape hatch, while a container boundary keeps the blast radius small
 if it makes a mistake or is manipulated by adversarial content it
-encounters while working autonomously. Consal itself stays thin by
+encounters while working autonomously. consal itself stays thin by
 design: GitHub is the project-management UI, Claude Code is the
-engineering capability, and Consal is the orchestration layer making
+engineering capability, and consal is the orchestration layer making
 those two things work together for a user who couldn't operate either
 one directly for this purpose.
 
 ## Dual explanation as a design principle
 
-Every unit of work Consal dispatches (a plan, an issue, a PR) carries
+Every unit of work consal dispatches (a plan, an issue, a PR) carries
 two independent representations of the same task: a common-language
 account of what it does and why, and the code itself. This is not just
 a courtesy translation for a reader who doesn't read code, it's a
@@ -139,7 +129,7 @@ section records the principle, not its implementation.
    it. This channel never goes away once autonomous operation starts;
    it's a steering wheel, not just a bootstrap-phase tool.
 
-Steps 2-4 are Consal's behavior, built on containers `dco` provides;
+Steps 2-4 are consal's behavior, built on containers `dco` provides;
 step 1's container creation is literally just `dco`.
 
 ## Interaction model
@@ -153,9 +143,9 @@ Deliberately hybrid, not one mode or the other:
   human can attach and talk to the container any time, and whatever
   gets typed becomes the next turn in whatever's already running.
 
-This hybrid is Consal's behavior, not something `dco` itself needs to
+This hybrid is consal's behavior, not something `dco` itself needs to
 know about. `dco` just keeps being able to launch/reattach to whatever
-container/profile Consal set up, exactly as it does for any project.
+container/profile consal set up, exactly as it does for any project.
 
 ## Isolation & safety goals
 
@@ -169,24 +159,55 @@ distinct threats, not just one:
   poisoned dependency, injected instructions in an issue/PR comment)
   and is manipulated into acting against the user's interest.
 
-Concretely, this means the following, all achieved by Consal supplying
+Concretely, this means the following, all achieved by consal supplying
 its own sub-config profile to `dco`, not by `dco` having built-in
-knowledge of any of this:
+knowledge of any of this. The primary lever is minimizing what's
+inside the container and how far any one credential reaches, rather
+than trying to build a perfect wall against an agent already inside
+sending data out: a hijacked agent that has nothing valuable to steal
+and no path to reach beyond its own sandboxed repo is a bounded
+problem, regardless of what it attempts.
 
-- A real network boundary during autonomous operation: default-deny
-  with an explicit, narrow allowlist, not "open and hope."
-  `CLAUDE_CODE_OAUTH_TOKEN` sits in every Consal sub-config's
-  `containerEnv`, readable by any process inside the container
-  (including whatever Claude's own Bash tool runs, since Claude Code
+- A credential scoped to exactly the target repo, never the user's
+  full personal access, so a hijacked agent's reach is bounded even if
+  it tries to misuse its own credential. SSH and the PAT
+  (`GH_TOKEN`/`CONSAL_GH_PAT`) are unrelated mechanisms: the PAT makes
+  `gh` commands and HTTPS git operations work, but does nothing for an
+  `ssh://`/`git@github.com:...` remote, which still needs a trusted
+  host key and a private key regardless of any PAT. consal-managed
+  projects therefore need **HTTPS remotes**, not SSH, for the
+  scoped-credential isolation goal to actually cover `git push`, not
+  just `gh` API calls.
+  - **Open direction, not yet designed:** credential handling today is
+    a single long-lived PAT/OAuth token per sub-config, sourced from a
+    host env var. Since credential scope is the primary safety lever
+    here (see above), a more sophisticated scheme, short-lived or
+    rotating tokens, finer-grained scoping, a small credential-issuing
+    helper, is worth exploring later. Still expected to stay on the
+    order of a shell script or two, not a new subsystem.
+- A human is the only one who can actually merge code into the
+  project. The agent must never force-push, push directly to a
+  protected branch, or touch branch/repo protection settings, enforced
+  at two independent layers (a local guardrail as defense in depth,
+  GitHub's own branch protection as the real backstop), with the local
+  layer never treated as sufficient on its own.
+- A network boundary during autonomous operation, as a secondary,
+  defense-in-depth layer, not the primary safety mechanism:
+  default-deny with an explicit, narrow allowlist, not "open and
+  hope." This is worth having (the credential injected via
+  `containerEnv` is readable by any process inside the container,
+  including whatever Claude's own Bash tool runs, since Claude Code
   has no mechanism to expose an env var to its own process while
-  hiding it from its own spawned subprocesses). Without a real egress
-  lock, nothing stops a hijacked agent from reading that token and
-  sending it anywhere on the open internet.
-  - **Scoped to Consal sub-configs, not the default profile.** The
+  hiding it from its own spawned subprocesses), but it's not where
+  effort should concentrate: a tightly-scoped credential already
+  bounds the damage even if egress control has a gap, so a simple
+  allowlist is enough here, not a stronger enforcement architecture
+  like `clawker`'s (see "Prior art" above).
+  - **Scoped to consal sub-configs, not the default profile.** The
     *default* profile (this repo's own everyday dev sandbox,
     `.devcontainer/devcontainer.json`) stays unrestricted by design;
-    only containers built from a Consal sub-config get locked down.
-    Every Consal sub-config's `devcontainer.json` bind-mounts its own
+    only containers built from a consal sub-config get locked down.
+    Every consal sub-config's `devcontainer.json` bind-mounts its own
     `allowlist.txt` over `/usr/local/etc/dco-allowlist.txt` at
     container-start, overriding the shared, empty top-level one *only*
     for containers built from that sub-config, without touching the
@@ -210,26 +231,10 @@ knowledge of any of this:
     know its own sub-config directory name, which varies per call) and
     copies `allowlist.txt` alongside the guardrail hook;
     `config.validate_subconfig` checks it's present, same as the hook.
-- A credential scoped to exactly the target repo, never the user's
-  full personal access, so a hijacked agent's reach is bounded even if
-  it tries to misuse its own credential. SSH and the PAT
-  (`GH_TOKEN`/`CONSAL_GH_PAT`) are unrelated mechanisms: the PAT makes
-  `gh` commands and HTTPS git operations work, but does nothing for an
-  `ssh://`/`git@github.com:...` remote, which still needs a trusted
-  host key and a private key regardless of any PAT. Consal-managed
-  projects therefore need **HTTPS remotes**, not SSH, for the
-  scoped-credential isolation goal to actually cover `git push`, not
-  just `gh` API calls.
-- A human is the only one who can actually merge code into the
-  project. The agent must never force-push, push directly to a
-  protected branch, or touch branch/repo protection settings, enforced
-  at two independent layers (a local guardrail as defense in depth,
-  GitHub's own branch protection as the real backstop), with the local
-  layer never treated as sufficient on its own.
 
 ## Opinionated defaults, not a blank framework
 
-Consal is not neutral plumbing between GitHub and Claude. It encodes
+consal is not neutral plumbing between GitHub and Claude. It encodes
 real judgment about how to use Claude well on a technically oriented
 research project: sophisticated usage patterns are available as
 strong defaults, not left for the researcher to assemble from scratch.
@@ -242,11 +247,11 @@ prompt per issue. For non-trivial work, the default is an
 orchestration pattern, one agent breaks the issue down, dispatches
 parallel sub-agents at the pieces, has agents check each other's
 output, then synthesizes a result before it becomes a PR. This doesn't
-require Consal to reimplement agent orchestration itself: Claude Code
+require consal to reimplement agent orchestration itself: Claude Code
 already exposes its own multi-agent primitives (parallel sub-agent
 dispatch, adversarial verification, synthesis) inside a single `claude
 -p` session (see "SDK vs. CLI launcher" below). The sophistication
-lives in how Consal prompts and configures a turn to invoke that
+lives in how consal prompts and configures a turn to invoke that
 pattern by default for suitable issues.
 
 Which specific capabilities belong in the default set beyond this
@@ -264,7 +269,7 @@ for a project where PRs start missing the target. Same for how direct
 interactive intervention relates to whatever the agent is doing when
 the human drops in: pause-and-redirect vs. leave-a-note-for-later are
 both legitimate depending on the situation. Configurability also
-covers which of Consal's opinionated Claude-usage defaults (see
+covers which of consal's opinionated Claude-usage defaults (see
 "Opinionated defaults, not a blank framework" above) are active for a
 given project: comprehensive, sensible defaults with every one of them
 configurable, not a fixed one-size-fits-all behavior.
@@ -295,7 +300,7 @@ scope, not something being quietly dropped.
 
 ## Engineering principles
 
-These are engineering constraints on Consal, independent of language or
+These are engineering constraints on consal, independent of language or
 architecture:
 
 1. Config that references other files (a build file pointing at a
@@ -326,13 +331,13 @@ architecture:
 
 ## Decided
 
-- **SDK vs. CLI launcher: CLI launcher.** Consal drives Claude by
+- **SDK vs. CLI launcher: CLI launcher.** consal drives Claude by
   launching the `claude` CLI with a constructed prompt (e.g. "here's
   issue #42, implement it") and lets Claude Code's own agent loop
-  handle the actual work: file edits, tests, git, all of it. Consal's
+  handle the actual work: file edits, tests, git, all of it. consal's
   own code is the orchestration layer around that: watch GitHub,
   decide what's next, hand off a prompt, repeat. The alternative, the
-  Claude Agent SDK (Consal implementing its own agent loop and tools in
+  Claude Agent SDK (consal implementing its own agent loop and tools in
   Python for full step-level programmatic control), is substantially
   more implementation effort to rebuild what Claude Code already
   provides, and nothing in v1 scope needs step-level control: the PR
@@ -341,7 +346,7 @@ architecture:
   enforcing the engineering principles above turns out to need hooks
   finer-grained than Claude Code's own permission/hook system exposes.
 
-- **Consal/`dco` interface: plain `dco` + `devcontainer exec`, never
+- **consal/`dco` interface: plain `dco` + `devcontainer exec`, never
   `--claude`, for autonomous turns.** `dco --claude`'s tmux/attach path
   is interactive-only by construction (a human at a TTY, no defined
   "done" signal), so it's reserved for step 2 (interactive planning)
@@ -366,7 +371,7 @@ architecture:
     the user's own interactive Claude Code sessions, unlike API-key
     billing, which never competes with personal usage but costs money
     independently. Requires that token to be generated once and set on
-    any host actually running Consal-managed containers headlessly.
+    any host actually running consal-managed containers headlessly.
   - **Profile vs. runtime state split:** the profile above is static,
     checked-in config. Runtime state (active issue, loop status, logs)
     is churny and lives outside git, in a host-side
@@ -377,7 +382,7 @@ architecture:
     through its `main()` ends by exec'ing an interactive shell or the
     `--claude` tmux session. The real primitive `dco` uses internally
     is `devcontainer up --workspace-folder ... --config ...`, but
-    calling that directly from Consal would mean reimplementing two
+    calling that directly from consal would mean reimplementing two
     things `dco` already owns:
     - `DCO_PROJECT_ID`, a hash of workspace path + sub-config name
       that `devcontainer.json`'s `${localEnv:DCO_PROJECT_ID:default}`
@@ -390,7 +395,7 @@ architecture:
       principle #1 warns about.
     - Git identity sync (`git config --global user.name`/`user.email`,
       read from the host): `dco` already owns this; a second copy in
-      Consal would have to be kept in lockstep by hand.
+      consal would have to be kept in lockstep by hand.
 
     So `dco` has one small, additive flag: `--up-only` runs everything
     `main()` already does up through git-identity sync (scaffold/
@@ -402,8 +407,8 @@ architecture:
     `run_turn`'s `--workspace-folder`) rather than relying on the
     calling process's cwd matching `dco`'s positional `[path]` argument
     implicitly. `DCO_PROJECT_ID` is consumed only at `devcontainer up`
-    time, so Consal's per-turn `run_turn` needs no knowledge of it at
-    all. Every per-turn call after bring-up is Consal calling the
+    time, so consal's per-turn `run_turn` needs no knowledge of it at
+    all. Every per-turn call after bring-up is consal calling the
     public `devcontainer` CLI directly: `devcontainer exec
     --workspace-folder ... --config ... -- claude -p "$PROMPT"`,
     always passing both `--workspace-folder` and `--config` (omitting
@@ -416,7 +421,7 @@ architecture:
     synchronous foreground subprocess with a real exit code and
     captured stdout/stderr, so principle #4 (explicit return value) is
     satisfied by construction. No idle-vs-working ambiguity, since
-    Consal is the one blocking on the call.
+    consal is the one blocking on the call.
   - **Container reuse, not fresh-per-task:** one container persists for
     the whole autonomous run, rebuilt only when the profile changes.
     Keeps `dco`'s existing persistence (`~/.claude` volume, bash
@@ -426,16 +431,16 @@ architecture:
     stale context from issue N into issue N+1). Default to reuse for
     v1; revisit if drift turns out to be a real problem.
 
-  Net effect: `dco` gains one small additive flag for Consal's
+  Net effect: `dco` gains one small additive flag for consal's
   benefit, `--up-only` for headless bring-up. Every per-turn call
-  after that is Consal calling the public `devcontainer` CLI directly.
+  after that is consal calling the public `devcontainer` CLI directly.
 
 - **Distribution model: a small package, stdlib + subprocess only.**
   This splits into two independent axes:
-  - **Dependency policy: stay stdlib + subprocess.** Consal already
+  - **Dependency policy: stay stdlib + subprocess.** consal already
     depends on `dco` by shelling out to it, the same way `dco` shells
     out to `docker`/`gh`/`devcontainer`. Continue that pattern one
-    level up: Consal talks to GitHub by shelling out to `gh` (parsing
+    level up: consal talks to GitHub by shelling out to `gh` (parsing
     its JSON output with stdlib `json`), not via `PyGithub`/`requests`.
     No third-party runtime dependencies. Preserves the same
     auditability property that motivated trimming `dco` itself down to
@@ -443,7 +448,7 @@ architecture:
     being shelled out to.
   - **File layout: a package (`src/consal/`), not one file.** Breaks
     from `dco`'s own single-file precedent, deliberately. The reason
-    Consal is Python and not bash is that the part that needs Python's
+    consal is Python and not bash is that the part that needs Python's
     testing/documentation tooling is exactly the part that's complex
     and evolving. That only pays off with real module boundaries
     (GitHub polling, prompt construction, guardrail checks, and the
@@ -496,15 +501,15 @@ architecture:
   commit). Coverage gets judged against "would this have caught the
   last few real bugs" (principle #6), not against a passing count.
 
-- **Guardrail hook ownership: authored fresh in Consal, no Python-side
+- **Guardrail hook ownership: authored fresh in consal, no Python-side
   reimplementation.** The local-guardrail layer from "Isolation &
   safety goals" (block `git push --force`, direct pushes to
   `main`/`master`, `gh pr merge`, branch-protection tampering, `gh
   secret set`) is a Claude Code `PreToolUse` hook, which has to be a
   shell command, since that's the interface Claude Code's hook system
   calls. There is no legitimate Python equivalent to build: a parallel
-  policy checker in Consal's own code would never actually run in the
-  enforcement path, since Consal (orchestrating from outside the
+  policy checker in consal's own code would never actually run in the
+  enforcement path, since consal (orchestrating from outside the
   container via `devcontainer exec`) has no visibility into individual
   Bash tool calls Claude Code makes mid-turn, it only ever sees a
   turn's aggregate exit code. Building one anyway would be dead code
@@ -512,7 +517,7 @@ architecture:
 
   The policy itself is genuinely autonomy-specific (not something
   `dco` should know about, consistent with the whole architecture
-  split), so it's authored and owned as a static template in Consal:
+  split), so it's authored and owned as a static template in consal:
   `src/consal/templates/guardrail-hook.sh`, hand-written, ~10 pattern
   checks, no generation from a Python policy DSL.
   `config.generate_subconfig` copies it into each managed project's
@@ -580,4 +585,4 @@ architecture:
 - Reimplementing GitHub's own issue/PR primitives.
 - `dco` reimplementing anything about GitHub, autonomy, or Claude
   Code's own agentic-loop/scheduling primitives: that entire domain
-  now belongs to Consal, not `dco`, by design.
+  now belongs to consal, not `dco`, by design.
