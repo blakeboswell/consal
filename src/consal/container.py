@@ -4,9 +4,10 @@ Interactive work (planning, direct intervention) goes through
 `dco --claude` directly and never touches this module. See
 CONSAL_GOALS.md, "Consal/`dco` interface". This module is only for
 headless, autonomous turns: `dco --sub-config <name> --up-only` to ensure
-the container is up (a small additive flag on `dco`, see the correction
-in CONSAL_GOALS.md; plain `dco` always attaches interactively, it has no
-headless bring-up mode of its own), then `devcontainer exec
+the container is up (a small additive flag on `dco`; see CONSAL_GOALS.md's
+"Consal/`dco` interface" decision; plain `dco` always attaches
+interactively, it has no headless bring-up mode of its own), then
+`devcontainer exec
 --workspace-folder ... --config ... -- claude -p "$PROMPT"` as a
 synchronous foreground subprocess, so its exit code is the turn's
 explicit success/failure signal (lesson carried forward: never let
@@ -70,8 +71,6 @@ def exec_in_container(
     tool-call payload on stdin, to test hook enforcement independent of
     whether a model actually attempts a given tool call) doesn't have to
     reconstruct the `--workspace-folder`/`--config` command shape itself.
-    That duplication is exactly how the missing `--config` bug happened
-    once already (see `run_turn`'s note below).
 
     Deliberately does not raise on a nonzero exit, same reasoning as
     `run_turn`.
@@ -108,10 +107,7 @@ def run_turn(workspace_folder: Path, subconfig_name: str, prompt: str) -> TurnRe
     `.devcontainer/devcontainer.json` (the default profile) when matching
     which running container to attach to, which doesn't match a container
     brought up via a named `--sub-config` and fails with "Dev container
-    not found". Found via a real integration test failure, not assumed:
-    an earlier version of this function omitted --config and happened to
-    pass against a long-lived project with an already-running default
-    container to fall back onto by accident.
+    not found".
 
     Deliberately does not raise on a nonzero exit. The whole point of
     going through `devcontainer exec` is that its exit code becomes the

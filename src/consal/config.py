@@ -7,15 +7,15 @@ to surface a gap.
 
 The guardrail hook shipped here (`templates/guardrail-hook.sh`) is
 autonomy-specific policy, so it's authored and owned in Consal, not `dco`.
-See CONSAL_GOALS.md's architecture rationale and the correction under
-"Consal/`dco` interface" (there's no Python-side reimplementation of this
+See CONSAL_GOALS.md's architecture rationale and its "Consal/`dco`
+interface" decision (there's no Python-side reimplementation of this
 policy: a Claude Code `PreToolUse` hook has to be a shell command, so a
 parallel Python checker would never run in the real enforcement path).
 
 `templates/allowlist.txt` is bind-mounted over the shared, empty
 top-level `.devcontainer/allowlist.txt` at container-start (see
 `devcontainer.json`'s `mounts` entry). See CONSAL_GOALS.md's "Isolation &
-safety goals" correction: this locks down egress specifically for
+safety goals" decision: this locks down egress specifically for
 containers carrying `CLAUDE_CODE_OAUTH_TOKEN`, without touching the
 default profile's own (currently open) firewall posture.
 """

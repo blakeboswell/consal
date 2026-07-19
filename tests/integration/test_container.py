@@ -13,15 +13,6 @@ to use it.
 Uses the `.devcontainer/consal-test/` fixture sub-config, not the (not yet
 built) production "consal" sub-config `config.generate_subconfig` will
 produce. See that fixture's own README.md.
-
-Note: an earlier version of `run_turn` omitted `--config` from its
-`devcontainer exec` call and these two tests passed anyway, almost
-certainly by accident, reaching an already-running default-profile
-container on the real, persistent repo this ran against rather than the
-`consal-test` sub-config container `ensure_container_up` actually brought
-up. Caught once a disposable-project fixture with no such fallback
-container existed (see conftest.py's `consal_managed_project`). See the
-correction in `container.py`'s `run_turn` docstring.
 """
 
 from __future__ import annotations

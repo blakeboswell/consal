@@ -6,10 +6,9 @@ project's own repo. See CONSAL_GOALS.md, "Consal/`dco` interface" >
 profile-vs-runtime-state split.
 
 `read_active_issue`/`write_active_issue` take the state directory itself
-(a `Path`), not a bare `project_id`, so neither hides an implicit
-`Path.home()` dependency the way an earlier version of `container.py`'s
-`ensure_container_up` implicitly relied on the calling process's cwd,
-found to be a real bug there. Callers who only have a `project_id` do
+(a `Path`), not a bare `project_id`, so neither function hides an
+implicit `Path.home()` dependency behind an innocuous-looking signature.
+Callers who only have a `project_id` do
 `read_active_issue(state_dir(project_id))`.
 """
 

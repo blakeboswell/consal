@@ -8,13 +8,11 @@ whose hook copy is inert.
 
 Deliberately invokes the hook script directly (same JSON-on-stdin
 technique as test_guardrail_hook.py's unit tests), not through a full
-`claude -p` conversational turn. An earlier version tried asking Claude
-to actually attempt a force-push in natural language, and Claude's own
-safety judgment declined the command before ever attempting the Bash
-tool call. The PreToolUse hook never got a chance to fire at all, so
-that approach couldn't actually prove the hook works, only that the
-model has good judgment (which is not what this test is for). Invoking
-the real hook file at its real in-container path via
+`claude -p` conversational turn: asking Claude to attempt a risky action
+in natural language depends on the model's own judgment, which can
+decline the command before the Bash tool call is ever attempted, meaning
+the PreToolUse hook never fires and nothing gets proven about the hook
+itself. Invoking the real hook file at its real in-container path via
 `container.exec_in_container` proves what actually matters here: the
 file is present, executable, and produces the correct decision,
 decoupled from whether a model can be talked into a risky action on any

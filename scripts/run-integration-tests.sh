@@ -21,14 +21,11 @@ mkdir -p .integration-results
 out_file=".integration-results/latest.txt"
 
 # devcontainer's verbose `docker run` logging echoes every containerEnv
-# value verbatim, including secrets passed via ${localEnv:...}: a real
-# CLAUDE_CODE_OAUTH_TOKEN leaked this way once already (into this file,
-# then into an AI conversation reading it). Redact known secret env vars
-# by literal string match (not regex, to avoid metacharacter issues) by
-# streaming pytest's combined output through this filter *before* any of
-# it touches disk, rather than writing raw output to a file first and
-# redacting afterward. That earlier approach left a window, however
-# brief, where an unredacted copy existed on disk. Streaming means no
+# value verbatim, including secrets passed via ${localEnv:...}. Redact
+# known secret env vars by literal string match (not regex, to avoid
+# metacharacter issues) by streaming pytest's combined output through
+# this filter *before* any of it touches disk, rather than writing raw
+# output to a file first and redacting afterward: streaming means no
 # unredacted copy is ever written anywhere, not even transiently.
 #
 # Uses `python3 -c` (script as an argument), not `python3 - <<PYEOF`

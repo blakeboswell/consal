@@ -52,10 +52,10 @@ def test_gh_is_authenticated() -> None:
 def test_dco_supports_up_only() -> None:
     """`container.ensure_container_up` needs `dco --sub-config <name>
     --up-only`, a flag added to `dco` specifically for Consal's headless
-    bring-up (see the correction in CONSAL_GOALS.md's "Consal/dco interface"
-    decision. Plain `dco` always attaches interactively and has no
-    headless mode of its own). Fails until that flag has landed on the
-    `dco` build installed on this host.
+    bring-up (see CONSAL_GOALS.md's "Consal/dco interface" decision.
+    Plain `dco` always attaches interactively and has no headless mode of
+    its own). Fails until that flag has landed on the `dco` build
+    installed on this host.
     """
     result = subprocess.run(["dco", "--help"], capture_output=True, text=True)
     # dco's usage() writes to stderr (die()/info()/usage() all do, per
@@ -70,10 +70,8 @@ def test_dco_supports_up_only() -> None:
 def test_claude_code_oauth_token_is_set() -> None:
     """Every Consal-generated devcontainer.json injects
     `"CLAUDE_CODE_OAUTH_TOKEN": "${localEnv:CLAUDE_CODE_OAUTH_TOKEN}"` (see
-    the correction in CONSAL_GOALS.md's "Consal/dco interface" decision) so
-    `claude -p` can authenticate headlessly instead of failing with
-    "Not logged in" (found missing via a real run_turn integration test
-    failure, not designed upfront).
+    CONSAL_GOALS.md's "Consal/dco interface" decision) so `claude -p` can
+    authenticate headlessly instead of failing with "Not logged in".
 
     Deliberately the subscription token (`claude setup-token`, a
     year-long OAuth token billed against the Pro/Max/Team plan's usage
