@@ -2,7 +2,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from consal.container import TurnResult
-from consal.scheduler import TickResult, next_turn, run_loop_once
+from consal.scheduler import TickResult, dispatch_decomposition, next_turn, run_loop_once
 
 FAKE_STATE_DIR = Path("/fake/state/dir")
 
@@ -150,3 +150,44 @@ def test_run_loop_once_clears_active_issue_state_when_idle(
     run_loop_once("proj", Path("/workspace"), "owner/repo", "consal")
 
     mock_write.assert_called_once_with(FAKE_STATE_DIR, None)
+
+
+@patch("consal.scheduler.container.run_turn")
+@patch("consal.scheduler.container.ensure_container_up")
+def test_dispatch_decomposition_ensures_container_up(
+    mock_ensure_up: MagicMock, mock_run_turn: MagicMock
+) -> None:
+    mock_run_turn.return_value = TurnResult(exit_code=0, stdout="", stderr="")
+
+    dispatch_decomposition(Path("/workspace"), "consal", "owner/repo", "the plan")
+
+    mock_ensure_up.assert_called_once_with(Path("/workspace"), "consal")
+
+
+@patch("consal.scheduler.container.run_turn")
+@patch("consal.scheduler.container.ensure_container_up")
+def test_dispatch_decomposition_dispatches_prompt_with_plan_and_repo(
+    mock_ensure_up: MagicMock, mock_run_turn: MagicMock
+) -> None:
+    mock_run_turn.return_value = TurnResult(exit_code=0, stdout="", stderr="")
+
+    dispatch_decomposition(Path("/workspace"), "consal", "owner/repo", "## Do the thing")
+
+    mock_run_turn.assert_called_once()
+    call_args = mock_run_turn.call_args[0]
+    assert call_args[0] == Path("/workspace")
+    assert call_args[1] == "consal"
+    assert "owner/repo" in call_args[2]
+    assert "## Do the thing" in call_args[2]
+
+
+@patch("consal.scheduler.container.run_turn")
+@patch("consal.scheduler.container.ensure_container_up")
+def test_dispatch_decomposition_returns_the_turn_result(
+    mock_ensure_up: MagicMock, mock_run_turn: MagicMock
+) -> None:
+    mock_run_turn.return_value = TurnResult(exit_code=1, stdout="", stderr="boom")
+
+    result = dispatch_decomposition(Path("/workspace"), "consal", "owner/repo", "a plan")
+
+    assert result == TurnResult(exit_code=1, stdout="", stderr="boom")

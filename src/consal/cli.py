@@ -12,8 +12,16 @@ from collections.abc import Sequence
 from pathlib import Path
 
 from consal import config, doctor as doctor_module
-from consal.scheduler import run_loop_once
-from consal.settings import DEFAULT_SUB_CONFIG, SettingsError, resolve_settings, write_config_file
+from consal.scheduler import dispatch_decomposition, run_loop_once
+from consal.settings import (
+    DEFAULT_SUB_CONFIG,
+    Settings,
+    SettingsError,
+    resolve_settings,
+    write_config_file,
+)
+
+PLAN_FILENAME = "PLAN.md"
 
 
 def _add_common_args(parser: argparse.ArgumentParser) -> None:
@@ -57,6 +65,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     run_parser = subparsers.add_parser("run", help="run one autonomous scheduler tick")
     _add_common_args(run_parser)
 
+    plan_parser = subparsers.add_parser(
+        "plan", help="decompose the project plan into GitHub issues"
+    )
+    _add_common_args(plan_parser)
+
     args = parser.parse_args(argv)
 
     if args.command == "init":
@@ -93,6 +106,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         )
         return 1
 
+    if args.command == "plan":
+        return _cmd_plan(settings)
+
     return 1
 
 
@@ -121,6 +137,35 @@ def _cmd_init(args: argparse.Namespace) -> int:
     config_path = write_config_file(workspace, **updates)
     print(f"consal init: wrote {config_path}")
     return 0
+
+
+def _cmd_plan(settings: Settings) -> int:
+    """`consal plan`: dispatch one plan-decomposition turn (see
+    CONSAL_GOALS.md's "Plan decomposition" decision). Reads the plan from
+    `PLAN.md` at the workspace root, the file step 2 of the workflow
+    (interactive planning) produces.
+    """
+    plan_path = settings.workspace / PLAN_FILENAME
+    if not plan_path.is_file():
+        print(
+            f"consal: error: no {PLAN_FILENAME} found in {settings.workspace}. "
+            'Write the project plan there first (see CONSAL_GOALS.md\'s '
+            '"The workflow", step 2).',
+            file=sys.stderr,
+        )
+        return 1
+
+    turn = dispatch_decomposition(
+        settings.workspace, settings.sub_config, settings.repo, plan_path.read_text()
+    )
+    if turn.succeeded:
+        print("consal plan: decomposition turn succeeded")
+        return 0
+    print(
+        f"consal plan: decomposition turn failed (exit {turn.exit_code})",
+        file=sys.stderr,
+    )
+    return 1
 
 
 if __name__ == "__main__":

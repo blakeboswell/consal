@@ -14,16 +14,19 @@ The core loop works end to end: given a project with open GitHub issues,
 `consal run` picks one, dispatches a real `claude -p` turn inside a
 sandboxed, network-locked-down container, and records the result,
 verified against a live GitHub repo and a live container, not just mocks.
+`consal plan` decomposes a `PLAN.md` into GitHub issues the same way,
+one dispatched turn, idempotent via a marker in each issue's body (see
+`CONSAL_GOALS.md`'s "Plan decomposition" decision).
 
 Not yet built:
-- **Plan decomposition.** Turning a high-level plan into GitHub issues
-  isn't automated; issues have to already exist. The interactive
-  planning session itself (step 2 of the workflow in `CONSAL_GOALS.md`)
-  is just `dco --claude` directly; no consal code is involved in that
-  step at all.
-- **A scheduling/polling loop.** `consal run` performs exactly one tick.
-  Running it repeatedly (cron, a shell loop, `watch`) is up to you for
-  now, deliberately out of scope for this module, see `scheduler.py`.
+- **Wrapping the interactive attach flow.** The interactive planning
+  session itself (step 2 of the workflow in `CONSAL_GOALS.md`) is just
+  `dco --claude` directly; no consal command wraps it yet, the one place
+  a user still has to know `dco`'s name.
+- **A scheduling/polling loop.** `consal run`/`consal plan` each perform
+  exactly one tick. Running them repeatedly (cron, a shell loop,
+  `watch`) is up to you for now, deliberately out of scope for
+  `scheduler.py`.
 - **Configurable oversight granularity.** A stated future goal, not V1
   scope. See `CONSAL_GOALS.md`'s "Configurability as a goal."
 
@@ -71,9 +74,16 @@ Then:
 
 ```sh
 consal doctor   # verify the setup is actually healthy, not just configured
+consal plan     # decompose PLAN.md into GitHub issues (skips ones already
+                # filed, via a marker in each issue's body)
 consal run      # one autonomous tick: bring up the container, pick an
                 # open issue, dispatch a real turn, record the result
 ```
+
+`consal plan` reads `PLAN.md` at the workspace root, the file the
+interactive planning session (step 2 of the workflow in
+`CONSAL_GOALS.md`) produces. Re-running it after editing the plan only
+files issues for sections that don't already have one.
 
 ## Development
 

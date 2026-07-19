@@ -158,3 +158,48 @@ def test_init_merges_into_existing_config_without_clobbering(tmp_path: Path) -> 
         "repo": "o/r",
         "sub_config": "custom",
     }
+
+
+@patch("consal.cli.dispatch_decomposition")
+def test_plan_errors_cleanly_when_plan_file_missing(
+    mock_dispatch: MagicMock, tmp_path: Path, capsys
+) -> None:
+    exit_code = main(
+        ["plan", "--workspace", str(tmp_path), "--project-id", "p", "--repo", "o/r"]
+    )
+    assert exit_code == 1
+    assert "PLAN.md" in capsys.readouterr().err
+    mock_dispatch.assert_not_called()
+
+
+@patch("consal.cli.dispatch_decomposition")
+def test_plan_dispatches_with_plan_text_and_resolved_settings(
+    mock_dispatch: MagicMock, tmp_path: Path, capsys
+) -> None:
+    (tmp_path / "PLAN.md").write_text("## Component A\nDo the thing.")
+    mock_dispatch.return_value = TurnResult(exit_code=0, stdout="", stderr="")
+
+    exit_code = main(
+        ["plan", "--workspace", str(tmp_path), "--project-id", "p", "--repo", "o/r"]
+    )
+
+    assert exit_code == 0
+    assert "succeeded" in capsys.readouterr().out.lower()
+    mock_dispatch.assert_called_once_with(
+        tmp_path.resolve(), "consal", "o/r", "## Component A\nDo the thing."
+    )
+
+
+@patch("consal.cli.dispatch_decomposition")
+def test_plan_reports_failure_with_nonzero_exit(
+    mock_dispatch: MagicMock, tmp_path: Path, capsys
+) -> None:
+    (tmp_path / "PLAN.md").write_text("a plan")
+    mock_dispatch.return_value = TurnResult(exit_code=1, stdout="", stderr="boom")
+
+    exit_code = main(
+        ["plan", "--workspace", str(tmp_path), "--project-id", "p", "--repo", "o/r"]
+    )
+
+    assert exit_code == 1
+    assert "failed" in capsys.readouterr().err.lower()

@@ -105,3 +105,20 @@ def run_loop_once(
         )
 
     return TickResult(issue_number=issue["number"], turn=turn)
+
+
+def dispatch_decomposition(
+    workspace_folder: Path, subconfig_name: str, repo: str, plan_text: str
+) -> TurnResult:
+    """Run one plan-decomposition turn: read the plan, file any new issues
+    it implies, via `prompts.prompt_for_decomposition`.
+
+    Deliberately separate from `run_loop_once`'s per-issue tick, not a
+    third branch of it: decomposition and issue-work are different kinds
+    of turns, triggered differently (a human running `consal plan` after
+    editing the plan, not every scheduler tick). See CONSAL_GOALS.md's
+    "Plan decomposition" decision.
+    """
+    container.ensure_container_up(workspace_folder, subconfig_name)
+    prompt = prompts.prompt_for_decomposition(repo, plan_text)
+    return container.run_turn(workspace_folder, subconfig_name, prompt)

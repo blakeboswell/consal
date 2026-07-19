@@ -1,4 +1,4 @@
-from consal.prompts import prompt_for_issue
+from consal.prompts import prompt_for_decomposition, prompt_for_issue
 
 
 def test_includes_repo_and_issue_number() -> None:
@@ -34,3 +34,41 @@ def test_handles_empty_body_without_raising() -> None:
     prompt = prompt_for_issue("owner/repo", 1, "a title", "")
     assert "owner/repo" in prompt
     assert "a title" in prompt
+
+
+def test_decomposition_includes_repo_and_plan_text() -> None:
+    prompt = prompt_for_decomposition("owner/repo", "## Component A\nDo the thing.")
+    assert "owner/repo" in prompt
+    assert "## Component A\nDo the thing." in prompt
+
+
+def test_decomposition_instructs_checking_existing_issues_first() -> None:
+    prompt = prompt_for_decomposition("owner/repo", "a plan").lower()
+    assert "gh issue list" in prompt
+    assert "existing issue" in prompt
+
+
+def test_decomposition_instructs_the_idempotency_marker() -> None:
+    prompt = prompt_for_decomposition("owner/repo", "a plan")
+    assert "consal-plan-ref" in prompt
+
+
+def test_decomposition_instructs_plain_language_explanation() -> None:
+    prompt = prompt_for_decomposition("owner/repo", "a plan").lower()
+    assert "plain-language" in prompt
+
+
+def test_decomposition_instructs_effort_scaling_for_sub_agents() -> None:
+    prompt = prompt_for_decomposition("owner/repo", "a plan").lower()
+    assert "sub-agent" in prompt
+    assert "skip sub-agent delegation" in prompt
+
+
+def test_decomposition_instructs_never_closing_or_editing_issues() -> None:
+    prompt = prompt_for_decomposition("owner/repo", "a plan").lower()
+    assert "never close or edit" in prompt
+
+
+def test_decomposition_uses_gh_issue_create() -> None:
+    prompt = prompt_for_decomposition("owner/repo", "a plan")
+    assert "gh issue create" in prompt
