@@ -1,9 +1,7 @@
-"""Wrappers around `dco` and `devcontainer exec` for autonomous turns.
+"""Wrappers around `dco` and `devcontainer exec`, for both autonomous
+turns and interactive attach.
 
-Interactive work (planning, direct intervention) goes through
-`dco --claude` directly and never touches this module. See
-CONSAL_GOALS.md, "Consal/`dco` interface". This module is only for
-headless, autonomous turns: `dco --sub-config <name> --up-only` to ensure
+Headless, autonomous turns: `dco --sub-config <name> --up-only` to ensure
 the container is up (a small additive flag on `dco`; see CONSAL_GOALS.md's
 "Consal/`dco` interface" decision; plain `dco` always attaches
 interactively, it has no headless bring-up mode of its own), then
@@ -12,6 +10,11 @@ interactively, it has no headless bring-up mode of its own), then
 synchronous foreground subprocess, so its exit code is the turn's
 explicit success/failure signal (lesson carried forward: never let
 success/failure be an accidental side effect).
+
+Interactive work (planning, direct intervention) goes through
+`dco --claude` (see `attach_interactive`), the one place `dco` itself is
+invoked directly rather than via `devcontainer exec` -- its tmux/attach
+session has no headless equivalent to synchronize on.
 """
 
 from __future__ import annotations
@@ -54,6 +57,21 @@ def ensure_container_up(workspace_folder: Path, subconfig_name: str) -> None:
         ],
         check=True,
     )
+
+
+def attach_interactive(workspace_folder: Path, subconfig_name: str) -> int:
+    """Run `dco <workspace_folder> --sub-config <subconfig_name> --claude`,
+    inheriting the calling process's stdio so the tmux/attach session
+    behaves normally.
+
+    Returns dco's exit code; an interactive session ending isn't a
+    success/failure signal the way a turn's exit code is, so unlike
+    `ensure_container_up` this never raises on a nonzero exit.
+    """
+    result = subprocess.run(
+        ["dco", str(workspace_folder), "--sub-config", subconfig_name, "--claude"]
+    )
+    return result.returncode
 
 
 def exec_in_container(

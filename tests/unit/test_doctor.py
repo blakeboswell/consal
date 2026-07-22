@@ -6,6 +6,7 @@ from unittest.mock import MagicMock, patch
 from consal.doctor import (
     check_allowlist_reachability,
     check_environment,
+    check_repo_access,
     check_subconfig,
     run,
 )
@@ -113,15 +114,63 @@ def test_check_allowlist_reachability_fails_when_file_missing(tmp_path: Path) ->
     assert check_allowlist_reachability(_settings(tmp_path)) is False
 
 
+def test_check_repo_access_fails_when_pat_unset(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.delenv("CONSAL_GH_PAT", raising=False)
+    assert check_repo_access(_settings(tmp_path)) is False
+
+
+@patch("consal.doctor.subprocess.run")
+def test_check_repo_access_fails_on_gh_error(mock_run: MagicMock, tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("CONSAL_GH_PAT", "scoped-pat")
+    mock_run.return_value = subprocess.CompletedProcess(
+        args=[], returncode=1, stdout="", stderr="not found"
+    )
+    assert check_repo_access(_settings(tmp_path)) is False
+
+
+@patch("consal.doctor.subprocess.run")
+def test_check_repo_access_fails_on_read_only_permission(mock_run: MagicMock, tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("CONSAL_GH_PAT", "scoped-pat")
+    mock_run.return_value = subprocess.CompletedProcess(
+        args=[], returncode=0, stdout='{"viewerPermission": "READ"}', stderr=""
+    )
+    assert check_repo_access(_settings(tmp_path)) is False
+
+
+@patch("consal.doctor.subprocess.run")
+def test_check_repo_access_passes_on_write_permission(mock_run: MagicMock, tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("CONSAL_GH_PAT", "scoped-pat")
+    mock_run.return_value = subprocess.CompletedProcess(
+        args=[], returncode=0, stdout='{"viewerPermission": "WRITE"}', stderr=""
+    )
+    assert check_repo_access(_settings(tmp_path)) is True
+
+
+@patch("consal.doctor.subprocess.run")
+def test_check_repo_access_uses_pat_not_ambient_env(mock_run: MagicMock, tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("CONSAL_GH_PAT", "scoped-pat")
+    mock_run.return_value = subprocess.CompletedProcess(
+        args=[], returncode=0, stdout='{"viewerPermission": "WRITE"}', stderr=""
+    )
+    check_repo_access(_settings(tmp_path))
+    assert mock_run.call_args.kwargs["env"]["GH_TOKEN"] == "scoped-pat"
+
+
+@patch("consal.doctor.check_repo_access", return_value=True)
 @patch("consal.doctor.check_allowlist_reachability", return_value=True)
 @patch("consal.doctor.check_subconfig", return_value=True)
 @patch("consal.doctor.check_environment", return_value=True)
-def test_run_returns_zero_when_all_pass(mock_env: MagicMock, mock_sub: MagicMock, mock_allow: MagicMock, tmp_path: Path) -> None:
+def test_run_returns_zero_when_all_pass(
+    mock_env: MagicMock, mock_sub: MagicMock, mock_allow: MagicMock, mock_repo: MagicMock, tmp_path: Path
+) -> None:
     assert run(_settings(tmp_path)) == 0
 
 
+@patch("consal.doctor.check_repo_access", return_value=True)
 @patch("consal.doctor.check_allowlist_reachability", return_value=True)
 @patch("consal.doctor.check_subconfig", return_value=True)
 @patch("consal.doctor.check_environment", return_value=False)
-def test_run_returns_nonzero_when_any_check_fails(mock_env: MagicMock, mock_sub: MagicMock, mock_allow: MagicMock, tmp_path: Path) -> None:
+def test_run_returns_nonzero_when_any_check_fails(
+    mock_env: MagicMock, mock_sub: MagicMock, mock_allow: MagicMock, mock_repo: MagicMock, tmp_path: Path
+) -> None:
     assert run(_settings(tmp_path)) == 1

@@ -1,10 +1,17 @@
 import json
 import subprocess
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from consal.github import close_issue, comment_on_issue, create_issue, list_open_issues
+from consal.github import (
+    close_issue,
+    comment_on_issue,
+    create_issue,
+    create_repo,
+    list_open_issues,
+)
 
 
 @patch("consal.github.subprocess.run")
@@ -119,3 +126,36 @@ def test_close_issue_propagates_gh_failure(mock_run: MagicMock) -> None:
     mock_run.side_effect = subprocess.CalledProcessError(returncode=1, cmd=["gh"])
     with pytest.raises(subprocess.CalledProcessError):
         close_issue("owner/repo", 42)
+
+
+@patch("consal.github.subprocess.run")
+def test_create_repo_builds_expected_command(mock_run: MagicMock) -> None:
+    mock_run.return_value = subprocess.CompletedProcess(args=[], returncode=0)
+    create_repo("owner/repo", Path("/workspace"))
+    mock_run.assert_called_once_with(
+        [
+            "gh", "repo", "create", "owner/repo", "--private",
+            "--source", "/workspace", "--remote", "origin", "--push",
+        ],
+        check=True,
+    )
+
+
+@patch("consal.github.subprocess.run")
+def test_create_repo_respects_visibility(mock_run: MagicMock) -> None:
+    mock_run.return_value = subprocess.CompletedProcess(args=[], returncode=0)
+    create_repo("owner/repo", Path("/workspace"), visibility="public")
+    mock_run.assert_called_once_with(
+        [
+            "gh", "repo", "create", "owner/repo", "--public",
+            "--source", "/workspace", "--remote", "origin", "--push",
+        ],
+        check=True,
+    )
+
+
+@patch("consal.github.subprocess.run")
+def test_create_repo_propagates_gh_failure(mock_run: MagicMock) -> None:
+    mock_run.side_effect = subprocess.CalledProcessError(returncode=1, cmd=["gh"])
+    with pytest.raises(subprocess.CalledProcessError):
+        create_repo("owner/repo", Path("/workspace"))

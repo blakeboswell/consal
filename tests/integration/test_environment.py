@@ -67,6 +67,38 @@ def test_dco_supports_up_only() -> None:
     )
 
 
+def test_dco_supports_claude_flag() -> None:
+    """`container.attach_interactive` needs `dco --sub-config <name>
+    --claude`. Unlike `--up-only` (a flag consal specifically requested),
+    `--claude` is dco's existing interactive-attach mode, so this should
+    already pass on any host with a reasonably current `dco` -- it's
+    checked here for the same reason as `--up-only`: a standing check,
+    not an assumption taken on faith.
+    """
+    result = subprocess.run(["dco", "--help"], capture_output=True, text=True)
+    help_text = result.stdout + result.stderr
+    assert "--claude" in help_text, (
+        "dco --help doesn't mention --claude. consal attach depends on it"
+    )
+
+
+def test_gh_has_delete_repo_scope() -> None:
+    """The `disposable_repo` fixture (conftest.py), used by the new
+    `test_bootstrap.py`/`test_doctor.py` integration tests, creates a
+    real GitHub repo per test and deletes it afterward via `gh repo
+    delete`. That call silently no-ops without the `delete_repo` OAuth
+    scope (checked here, not assumed), which would otherwise leave real,
+    disposable-but-real repos behind on this host's account, one per
+    test run, forever.
+    """
+    result = subprocess.run(["gh", "auth", "status"], capture_output=True, text=True)
+    assert "delete_repo" in (result.stdout + result.stderr), (
+        "gh's token is missing the delete_repo scope. Integration tests that "
+        "create disposable repos won't be able to clean them up. Run: "
+        "gh auth refresh -h github.com -s delete_repo"
+    )
+
+
 def test_claude_code_oauth_token_is_set() -> None:
     """Every Consal-generated devcontainer.json injects
     `"CLAUDE_CODE_OAUTH_TOKEN": "${localEnv:CLAUDE_CODE_OAUTH_TOKEN}"` (see

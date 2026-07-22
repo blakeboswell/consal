@@ -18,11 +18,13 @@ verified against a live GitHub repo and a live container, not just mocks.
 one dispatched turn, idempotent via a marker in each issue's body (see
 `CONSAL_GOALS.md`'s "Plan decomposition" decision).
 
+`consal init --create` creates a brand-new GitHub repo (never a fork)
+and pushes the sub-config to it in one step; plain `consal init` against
+an existing project detects and adopts its `origin` remote. `consal
+attach` wraps the interactive planning/intervention session, so `dco`
+itself is never invoked directly by a user, only by consal.
+
 Not yet built:
-- **Wrapping the interactive attach flow.** The interactive planning
-  session itself (step 2 of the workflow in `CONSAL_GOALS.md`) is just
-  `dco --claude` directly; no consal command wraps it yet, the one place
-  a user still has to know `dco`'s name.
 - **A scheduling/polling loop.** `consal run`/`consal plan` each perform
   exactly one tick. Running them repeatedly (cron, a shell loop,
   `watch`) is up to you for now, deliberately out of scope for
@@ -32,31 +34,32 @@ Not yet built:
 
 ## Usage
 
-Prerequisites, once per host:
+Prerequisites, once per host (`consal doctor`, see below, checks all of
+this at once): `dco` (with `--up-only` support — `dco --help` should
+mention it), `@devcontainers/cli` (`devcontainer` on `PATH`), `gh`
+authenticated as yourself (`gh auth status`), `CONSAL_GH_PAT` set (a PAT
+scoped to exactly the target repo, never your full personal access — see
+`CONSAL_GOALS.md`'s isolation goals), `CLAUDE_CODE_OAUTH_TOKEN` set (a
+long-lived token from `claude setup-token`, so headless turns can
+authenticate).
 
-- [`dco`](https://github.com/blakeboswell/dco) installed, with `--up-only`
-  support (`dco --help` should mention it)
-- [`@devcontainers/cli`](https://github.com/devcontainers/cli) installed
-  (`devcontainer` on `PATH`)
-- `gh` installed and authenticated (`gh auth status`)
-- `CONSAL_GH_PAT` set: a PAT scoped to exactly the target repo, never
-  your full personal access (see `CONSAL_GOALS.md`'s isolation goals)
-- `CLAUDE_CODE_OAUTH_TOKEN` set: a long-lived token from
-  `claude setup-token`, so headless turns can authenticate
-
-Run `consal doctor` (see below) to check all of this at once.
-
-Per project, a git repo with at least one commit (`dco`'s git-identity
-sync and the guardrail hook's branch-detection logic both expect a real
-repo):
+Per project, one of:
 
 ```sh
-cd your-project
-consal init --repo owner/name
+mkdir your-project && cd your-project
+consal init --repo owner/name --create   # brand-new project: creates the
+                                          # GitHub repo (never a fork) and
+                                          # pushes the sub-config to it
 ```
 
-Generates `.devcontainer/consal/` (the sandboxed profile: firewall
-allowlist, guardrail hook, `containerEnv` wiring) and
+```sh
+cd your-existing-project                 # already a git repo with an
+consal init                              # 'origin' remote: detected and
+                                          # adopted automatically
+```
+
+Either way, this generates `.devcontainer/consal/` (the sandboxed
+profile: firewall allowlist, guardrail hook, `containerEnv` wiring) and
 `.consal/config.toml`:
 
 ```toml
@@ -73,17 +76,20 @@ so re-running `init` to add one setting doesn't lose another.
 Then:
 
 ```sh
-consal doctor   # verify the setup is actually healthy, not just configured
+consal doctor   # verify the setup is actually healthy, not just configured,
+                # including that CONSAL_GH_PAT itself can push to the repo
+consal attach   # interactive session: tell Claude the project idea, it
+                # proposes PLAN.md, iterate on it together
 consal plan     # decompose PLAN.md into GitHub issues (skips ones already
                 # filed, via a marker in each issue's body)
 consal run      # one autonomous tick: bring up the container, pick an
                 # open issue, dispatch a real turn, record the result
 ```
 
-`consal plan` reads `PLAN.md` at the workspace root, the file the
-interactive planning session (step 2 of the workflow in
-`CONSAL_GOALS.md`) produces. Re-running it after editing the plan only
-files issues for sections that don't already have one.
+Re-running `consal plan` after editing `PLAN.md` only files issues for
+sections that don't already have one. `consal attach` is also the way to
+intervene directly at any point once autonomous work has started — same
+command, not a different one.
 
 ## Development
 

@@ -15,8 +15,34 @@ from __future__ import annotations
 
 import json
 import subprocess
+from pathlib import Path
 
 _ISSUE_LIST_FIELDS = "number,title,body,url,state,labels,createdAt,updatedAt"
+
+
+def create_repo(repo: str, workspace: Path, visibility: str = "private") -> None:
+    """Create ``repo`` (``owner/name``) on GitHub from the local
+    ``workspace`` directory's current commit, and push it.
+
+    ``workspace`` must already be a git repo with at least one commit:
+    `--source`/`--push` push what's there, they don't create a commit of
+    their own.
+    """
+    subprocess.run(
+        [
+            "gh",
+            "repo",
+            "create",
+            repo,
+            f"--{visibility}",
+            "--source",
+            str(workspace),
+            "--remote",
+            "origin",
+            "--push",
+        ],
+        check=True,
+    )
 
 
 def list_open_issues(repo: str) -> list[dict]:

@@ -4,7 +4,13 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from consal.container import TurnResult, ensure_container_up, exec_in_container, run_turn
+from consal.container import (
+    TurnResult,
+    attach_interactive,
+    ensure_container_up,
+    exec_in_container,
+    run_turn,
+)
 
 
 def test_turn_result_succeeded_true_on_zero_exit() -> None:
@@ -100,3 +106,18 @@ def test_run_turn_returns_result_on_failure_without_raising(mock_run: MagicMock)
     result = run_turn(Path("/workspace"), "consal", "prompt")
     assert result == TurnResult(exit_code=1, stdout="", stderr="claude crashed")
     assert result.succeeded is False
+
+
+@patch("consal.container.subprocess.run")
+def test_attach_interactive_invokes_dco_claude(mock_run: MagicMock) -> None:
+    mock_run.return_value = subprocess.CompletedProcess(args=[], returncode=0)
+    attach_interactive(Path("/workspace"), "consal")
+    mock_run.assert_called_once_with(
+        ["dco", "/workspace", "--sub-config", "consal", "--claude"]
+    )
+
+
+@patch("consal.container.subprocess.run")
+def test_attach_interactive_returns_exit_code_without_raising(mock_run: MagicMock) -> None:
+    mock_run.return_value = subprocess.CompletedProcess(args=[], returncode=1)
+    assert attach_interactive(Path("/workspace"), "consal") == 1

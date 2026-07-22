@@ -160,6 +160,99 @@ def test_init_merges_into_existing_config_without_clobbering(tmp_path: Path) -> 
     }
 
 
+@patch("consal.cli.bootstrap.create_project")
+def test_init_create_requires_repo(mock_create: MagicMock, tmp_path: Path, capsys) -> None:
+    exit_code = main(["init", "--workspace", str(tmp_path), "--create"])
+    assert exit_code == 1
+    assert "--create requires --repo" in capsys.readouterr().err
+    mock_create.assert_not_called()
+
+
+@patch("consal.cli.bootstrap.create_project")
+def test_init_create_dispatches_and_records_repo(mock_create: MagicMock, tmp_path: Path, capsys) -> None:
+    exit_code = main(
+        ["init", "--workspace", str(tmp_path), "--create", "--repo", "owner/repo"]
+    )
+    assert exit_code == 0
+    mock_create.assert_called_once_with(tmp_path.resolve(), "consal", "owner/repo")
+    assert "created owner/repo" in capsys.readouterr().out
+    assert load_config_file(tmp_path) == {"sub_config": "consal", "repo": "owner/repo"}
+
+
+@patch("consal.cli.bootstrap.create_project")
+def test_init_create_reports_bootstrap_failure(mock_create: MagicMock, tmp_path: Path, capsys) -> None:
+    mock_create.side_effect = RuntimeError("already has an 'origin' remote")
+    exit_code = main(
+        ["init", "--workspace", str(tmp_path), "--create", "--repo", "owner/repo"]
+    )
+    assert exit_code == 1
+    assert "already has an 'origin' remote" in capsys.readouterr().err
+
+
+@patch("consal.cli.bootstrap.detect_origin_repo", return_value="detected/repo")
+def test_init_without_repo_adopts_detected_remote(mock_detect: MagicMock, tmp_path: Path, capsys) -> None:
+    exit_code = main(["init", "--workspace", str(tmp_path)])
+    assert exit_code == 0
+    assert "detected existing remote, using detected/repo" in capsys.readouterr().out
+    assert load_config_file(tmp_path)["repo"] == "detected/repo"
+
+
+@patch("consal.cli.bootstrap.detect_origin_repo", return_value="detected/repo")
+def test_init_explicit_repo_conflicting_with_detected_remote_errors(
+    mock_detect: MagicMock, tmp_path: Path, capsys
+) -> None:
+    exit_code = main(["init", "--workspace", str(tmp_path), "--repo", "explicit/repo"])
+    assert exit_code == 1
+    assert "doesn't match" in capsys.readouterr().err
+    assert "repo" not in load_config_file(tmp_path)
+
+
+@patch("consal.cli.bootstrap.detect_origin_repo", return_value=None)
+def test_init_without_repo_and_no_detected_remote_leaves_repo_unset(
+    mock_detect: MagicMock, tmp_path: Path
+) -> None:
+    main(["init", "--workspace", str(tmp_path)])
+    assert "repo" not in load_config_file(tmp_path)
+
+
+@patch("consal.cli.container.attach_interactive")
+def test_attach_dispatches_with_resolved_workspace_and_subconfig(
+    mock_attach: MagicMock, tmp_path: Path
+) -> None:
+    mock_attach.return_value = 0
+    exit_code = main(["attach", "--workspace", str(tmp_path)])
+    assert exit_code == 0
+    mock_attach.assert_called_once_with(tmp_path.resolve(), "consal")
+
+
+@patch("consal.cli.container.attach_interactive")
+def test_attach_does_not_require_project_id_or_repo(
+    mock_attach: MagicMock, tmp_path: Path
+) -> None:
+    # unlike doctor/run, attach must not go through resolve_settings's
+    # required-field check -- an interactive session needs neither.
+    mock_attach.return_value = 0
+    exit_code = main(["attach", "--workspace", str(tmp_path)])
+    assert exit_code == 0
+
+
+@patch("consal.cli.container.attach_interactive")
+def test_attach_propagates_dco_exit_code(mock_attach: MagicMock, tmp_path: Path) -> None:
+    mock_attach.return_value = 3
+    exit_code = main(["attach", "--workspace", str(tmp_path)])
+    assert exit_code == 3
+
+
+@patch("consal.cli.container.attach_interactive")
+def test_attach_respects_sub_config_from_config_file(
+    mock_attach: MagicMock, tmp_path: Path
+) -> None:
+    mock_attach.return_value = 0
+    main(["init", "--workspace", str(tmp_path), "--sub-config", "custom"])
+    main(["attach", "--workspace", str(tmp_path)])
+    mock_attach.assert_called_once_with(tmp_path.resolve(), "custom")
+
+
 @patch("consal.cli.dispatch_decomposition")
 def test_plan_errors_cleanly_when_plan_file_missing(
     mock_dispatch: MagicMock, tmp_path: Path, capsys

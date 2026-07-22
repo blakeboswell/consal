@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import subprocess
+import uuid
 from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
 
 import pytest
 
+from consal import bootstrap
 from consal.config import generate_subconfig
 from consal.container import ensure_container_up
 
@@ -80,3 +82,33 @@ def consal_managed_project(tmp_path: Path) -> Iterator[ManagedProject]:
             capture_output=True,
             text=True,
         )
+
+
+@pytest.fixture
+def disposable_repo(tmp_path: Path) -> Iterator[str]:
+    """A real, disposable GitHub repo created via the real
+    `bootstrap.create_project` path (real `git init`/commit, real `gh
+    repo create --push`), under whatever account `gh` is authenticated
+    as. Deleted afterward regardless of outcome.
+
+    Requires the `delete_repo` OAuth scope on this host's `gh` login
+    (`gh auth refresh -h github.com -s delete_repo` if
+    `test_environment.py::test_gh_has_delete_repo_scope` fails) --
+    without it, `gh repo delete` below fails silently (its own exit code
+    is deliberately not checked, so a missing scope doesn't mask the
+    actual test's pass/fail) and leaves a real, private, disposable repo
+    behind on the account.
+    """
+    username = subprocess.run(
+        ["gh", "api", "user", "--jq", ".login"],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.strip()
+    repo = f"{username}/consal-integration-test-{uuid.uuid4().hex[:8]}"
+
+    bootstrap.create_project(tmp_path, SUBCONFIG_NAME, repo)
+    try:
+        yield repo
+    finally:
+        subprocess.run(["gh", "repo", "delete", repo, "--yes"], capture_output=True, text=True)

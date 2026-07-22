@@ -10,6 +10,7 @@ state isn't CI's job to assert."
 
 from __future__ import annotations
 
+import json
 import os
 import shutil
 import socket
@@ -97,11 +98,42 @@ def check_allowlist_reachability(settings: Settings) -> bool:
     return all(checks)
 
 
+def check_repo_access(settings: Settings) -> bool:
+    """Verify the scoped `CONSAL_GH_PAT` itself -- not just the host's own,
+    almost-certainly-broader `gh` login -- can actually push to
+    ``settings.repo``. Runs `gh repo view` with `GH_TOKEN` overridden to
+    the PAT, so this exercises the exact credential the sandboxed
+    container has, catching a wrong-scoped or expired PAT before a turn
+    ever starts (lesson #2: a standing check, not a one-time assertion).
+    """
+    label = f"CONSAL_GH_PAT can access {settings.repo}"
+    pat = os.environ.get("CONSAL_GH_PAT")
+    if not pat:
+        return _report(label, False, "CONSAL_GH_PAT not set")
+
+    result = subprocess.run(
+        ["gh", "repo", "view", settings.repo, "--json", "viewerPermission"],
+        capture_output=True,
+        text=True,
+        env={**os.environ, "GH_TOKEN": pat},
+    )
+    if result.returncode != 0:
+        return _report(label, False, result.stderr.strip())
+
+    permission = json.loads(result.stdout).get("viewerPermission")
+    return _report(
+        label,
+        permission in ("WRITE", "MAINTAIN", "ADMIN"),
+        f"viewerPermission={permission}, need at least WRITE",
+    )
+
+
 def run(settings: Settings) -> int:
     """Run every check, print a report, return 0 only if all passed."""
     results = [
         check_environment(),
         check_subconfig(settings),
         check_allowlist_reachability(settings),
+        check_repo_access(settings),
     ]
     return 0 if all(results) else 1

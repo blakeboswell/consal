@@ -367,11 +367,13 @@ architecture:
   is interactive-only by construction (a human at a TTY, no defined
   "done" signal), so it's reserved for step 2 (interactive planning)
   and direct human intervention (step 4), never for autonomous turns.
-  - **Open direction, not yet designed:** this attach flow is
-    currently a direct `dco --claude` invocation, the one place a user
-    still has to know `dco`'s name. A thin consal-owned wrapper around
-    it (so every path, autonomous or interactive, goes through a
-    consal command) is a natural next step; not built yet.
+  - **Decided: `consal attach` wraps this.** `container.attach_interactive`
+    runs `dco <workspace> --sub-config <name> --claude`, inheriting the
+    calling process's stdio for the tmux session, and returns dco's exit
+    code without raising on a nonzero one (an interactive session ending
+    isn't a success/failure signal the way a turn's exit code is). Every
+    path, autonomous or interactive, now goes through a consal command;
+    `dco` itself is never invoked directly by a user.
   - **Sub-config contents:** a directory, matching how `--sub-config`
     already works: `.devcontainer/consal/devcontainer.json` plus its
     own allowlist entries (referencing the shared `../Dockerfile` /
@@ -455,6 +457,46 @@ architecture:
   Net effect: `dco` gains one small additive flag for consal's
   benefit, `--up-only` for headless bring-up. Every per-turn call
   after that is consal calling the public `devcontainer` CLI directly.
+
+- **Repo creation: `consal init --create`, brand-new only, never a
+  fork.** Closes step 1 of "The workflow" ("create a container and a
+  GitHub repo") for the repo half, which had no command behind it before
+  this. `bootstrap.create_project` `git init`s the workspace if needed,
+  generates the sub-config, commits exactly that (nothing else already
+  sitting in the workspace), then `github.create_repo` (`gh repo create
+  --source=. --remote=origin --push`) creates the GitHub repo from that
+  commit and pushes. Raises if an `origin` remote already exists:
+  `--create` means "make something new," never "adopt what's here" or
+  fork an existing repo — forking is explicitly deferred, not a v1
+  concern. Private by default, no `--public` flag exposed: one flag
+  doing one thing, not speculative surface for a choice nobody's asked
+  for yet. Uses the host's own `gh` login for this one-time bootstrap
+  step, not the scoped `CONSAL_GH_PAT` — repo creation happens before the
+  container exists at all, and this doesn't weaken the isolation goals,
+  since the PAT's job is bounding what the *container* can reach
+  afterward, not gating who may create a repo in the first place.
+
+  - **Existing-repo detection, the counterpart.** Plain `consal init`
+    (no `--create`) auto-detects and adopts a workspace's existing
+    `origin` remote via `bootstrap.detect_origin_repo` (parses both
+    `https://github.com/owner/name.git` and `git@github.com:owner/name.git`),
+    so pointing consal at an already-real GitHub project needs no
+    `--repo` flag at all. An explicit `--repo` that conflicts with a
+    detected remote is a hard error rather than a silent pick, since
+    guessing wrong here has the same "points at the wrong repo" failure
+    mode `settings.py`'s no-default policy for `repo`/`project_id`
+    already guards against. `--create` and detection are mutually
+    exclusive by construction, never a shared code path.
+  - **`consal doctor`'s fourth check: credential-vs-repo access.**
+    Extends the already-decided doctor design (environment,
+    sub-config self-consistency, allowlist reachability) with a fourth
+    category: does `CONSAL_GH_PAT` — the scoped credential the container
+    actually uses, not the host's own broader `gh` login — actually have
+    write access to the configured repo. Checking the host's own login
+    would miss exactly the failure this exists to catch (a PAT scoped to
+    the wrong repo, or expired); `gh repo view --json viewerPermission`
+    run with `GH_TOKEN` overridden to the PAT is the standing check,
+    same "not a one-time assertion" lesson (#2) as the allowlist check.
 
 - **Distribution model: a small package, stdlib + subprocess only.**
   This splits into two independent axes:
